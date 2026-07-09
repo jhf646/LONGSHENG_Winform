@@ -1,0 +1,621 @@
+{
+  "Inventory": [],
+  "Slots": [
+    {
+      "SlotCode": "1\u6392-1\u5217-1\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 1,
+      "LevelNumber": 1
+    },
+    {
+      "SlotCode": "1\u6392-1\u5217-2\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 1,
+      "LevelNumber": 2
+    },
+    {
+      "SlotCode": "1\u6392-1\u5217-3\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 1,
+      "LevelNumber": 3
+    },
+    {
+      "SlotCode": "1\u6392-1\u5217-4\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 1,
+      "LevelNumber": 4
+    },
+    {
+      "SlotCode": "1\u6392-1\u5217-5\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 1,
+      "LevelNumber": 5
+    },
+    {
+      "SlotCode": "1\u6392-1\u5217-6\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 1,
+      "LevelNumber": 6
+    },
+    {
+      "SlotCode": "1\u6392-1\u5217-7\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 1,
+      "LevelNumber": 7
+    },
+    {
+      "SlotCode": "1\u6392-1\u5217-8\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 1,
+      "LevelNumber": 8
+    },
+    {
+      "SlotCode": "1\u6392-2\u5217-1\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 2,
+      "LevelNumber": 1
+    },
+    {
+      "SlotCode": "1\u6392-2\u5217-2\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 2,
+      "LevelNumber": 2
+    },
+    {
+      "SlotCode": "1\u6392-2\u5217-3\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 2,
+      "LevelNumber": 3
+    },
+    {
+      "SlotCode": "1\u6392-2\u5217-4\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 2,
+      "LevelNumber": 4
+    },
+    {
+      "SlotCode": "1\u6392-2\u5217-5\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 2,
+      "LevelNumber": 5
+    },
+    {
+      "SlotCode": "1\u6392-2\u5217-6\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 2,
+      "LevelNumber": 6
+    },
+    {
+      "SlotCode": "1\u6392-2\u5217-7\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 2,
+      "LevelNumber": 7
+    },
+    {
+      "SlotCode": "1\u6392-2\u5217-8\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 2,
+      "LevelNumber": 8
+    },
+    {
+      "SlotCode": "1\u6392-3\u5217-1\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 3,
+      "LevelNumber": 1
+    },
+    {
+      "SlotCode": "1\u6392-3\u5217-2\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 3,
+      "LevelNumber": 2
+    },
+    {
+      "SlotCode": "1\u6392-3\u5217-3\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 3,
+      "LevelNumber": 3
+    },
+    {
+      "SlotCode": "1\u6392-3\u5217-4\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 3,
+      "LevelNumber": 4
+    },
+    {
+      "SlotCode": "1\u6392-3\u5217-5\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 3,
+      "LevelNumber": 5
+    },
+    {
+      "SlotCode": "1\u6392-3\u5217-6\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 3,
+      "LevelNumber": 6
+    },
+    {
+      "SlotCode": "1\u6392-3\u5217-7\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 3,
+      "LevelNumber": 7
+    },
+    {
+      "SlotCode": "1\u6392-3\u5217-8\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 3,
+      "LevelNumber": 8
+    },
+    {
+      "SlotCode": "1\u6392-4\u5217-1\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 4,
+      "LevelNumber": 1
+    },
+    {
+      "SlotCode": "1\u6392-4\u5217-2\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 4,
+      "LevelNumber": 2
+    },
+    {
+      "SlotCode": "1\u6392-4\u5217-3\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 4,
+      "LevelNumber": 3
+    },
+    {
+      "SlotCode": "1\u6392-4\u5217-4\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 4,
+      "LevelNumber": 4
+    },
+    {
+      "SlotCode": "1\u6392-4\u5217-5\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 4,
+      "LevelNumber": 5
+    },
+    {
+      "SlotCode": "1\u6392-4\u5217-6\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 4,
+      "LevelNumber": 6
+    },
+    {
+      "SlotCode": "1\u6392-4\u5217-7\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 4,
+      "LevelNumber": 7
+    },
+    {
+      "SlotCode": "1\u6392-4\u5217-8\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "1\u6392",
+      "RowNumber": 1,
+      "ColumnNumber": 4,
+      "LevelNumber": 8
+    },
+    {
+      "SlotCode": "2\u6392-1\u5217-1\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 1,
+      "LevelNumber": 1
+    },
+    {
+      "SlotCode": "2\u6392-1\u5217-2\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 1,
+      "LevelNumber": 2
+    },
+    {
+      "SlotCode": "2\u6392-1\u5217-3\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 1,
+      "LevelNumber": 3
+    },
+    {
+      "SlotCode": "2\u6392-1\u5217-4\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 1,
+      "LevelNumber": 4
+    },
+    {
+      "SlotCode": "2\u6392-1\u5217-5\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 1,
+      "LevelNumber": 5
+    },
+    {
+      "SlotCode": "2\u6392-1\u5217-6\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 1,
+      "LevelNumber": 6
+    },
+    {
+      "SlotCode": "2\u6392-1\u5217-7\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 1,
+      "LevelNumber": 7
+    },
+    {
+      "SlotCode": "2\u6392-1\u5217-8\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 1,
+      "LevelNumber": 8
+    },
+    {
+      "SlotCode": "2\u6392-2\u5217-1\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 2,
+      "LevelNumber": 1
+    },
+    {
+      "SlotCode": "2\u6392-2\u5217-2\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 2,
+      "LevelNumber": 2
+    },
+    {
+      "SlotCode": "2\u6392-2\u5217-3\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 2,
+      "LevelNumber": 3
+    },
+    {
+      "SlotCode": "2\u6392-2\u5217-4\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 2,
+      "LevelNumber": 4
+    },
+    {
+      "SlotCode": "2\u6392-2\u5217-5\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 2,
+      "LevelNumber": 5
+    },
+    {
+      "SlotCode": "2\u6392-2\u5217-6\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 2,
+      "LevelNumber": 6
+    },
+    {
+      "SlotCode": "2\u6392-2\u5217-7\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 2,
+      "LevelNumber": 7
+    },
+    {
+      "SlotCode": "2\u6392-2\u5217-8\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 2,
+      "LevelNumber": 8
+    },
+    {
+      "SlotCode": "2\u6392-3\u5217-1\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 3,
+      "LevelNumber": 1
+    },
+    {
+      "SlotCode": "2\u6392-3\u5217-2\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 3,
+      "LevelNumber": 2
+    },
+    {
+      "SlotCode": "2\u6392-3\u5217-3\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 3,
+      "LevelNumber": 3
+    },
+    {
+      "SlotCode": "2\u6392-3\u5217-4\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 3,
+      "LevelNumber": 4
+    },
+    {
+      "SlotCode": "2\u6392-3\u5217-5\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 3,
+      "LevelNumber": 5
+    },
+    {
+      "SlotCode": "2\u6392-3\u5217-6\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 3,
+      "LevelNumber": 6
+    },
+    {
+      "SlotCode": "2\u6392-3\u5217-7\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 3,
+      "LevelNumber": 7
+    },
+    {
+      "SlotCode": "2\u6392-3\u5217-8\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 3,
+      "LevelNumber": 8
+    },
+    {
+      "SlotCode": "2\u6392-4\u5217-1\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 4,
+      "LevelNumber": 1
+    },
+    {
+      "SlotCode": "2\u6392-4\u5217-2\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 4,
+      "LevelNumber": 2
+    },
+    {
+      "SlotCode": "2\u6392-4\u5217-3\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 4,
+      "LevelNumber": 3
+    },
+    {
+      "SlotCode": "2\u6392-4\u5217-4\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 4,
+      "LevelNumber": 4
+    },
+    {
+      "SlotCode": "2\u6392-4\u5217-5\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 4,
+      "LevelNumber": 5
+    },
+    {
+      "SlotCode": "2\u6392-4\u5217-6\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 4,
+      "LevelNumber": 6
+    },
+    {
+      "SlotCode": "2\u6392-4\u5217-7\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 4,
+      "LevelNumber": 7
+    },
+    {
+      "SlotCode": "2\u6392-4\u5217-8\u5C42",
+      "IsOccupied": false,
+      "WorkpieceId": null,
+      "Zone": "2\u6392",
+      "RowNumber": 2,
+      "ColumnNumber": 4,
+      "LevelNumber": 8
+    }
+  ],
+  "Ledger": [],
+  "EquipmentStatuses": [
+    {
+      "Name": "\u5165\u5E93\u53F0",
+      "Health": 2,
+      "Message": "\u68C0\u6D4B\u5230\u5F02\u5E38\uFF0C\u8BF7\u4EBA\u5DE5\u590D\u4F4D",
+      "UpdatedAt": "2026-07-08T13:52:09.5254482+08:00"
+    },
+    {
+      "Name": "\u5806\u579B\u673A",
+      "Health": 2,
+      "Message": "\u68C0\u6D4B\u5230\u5F02\u5E38\uFF0C\u8BF7\u4EBA\u5DE5\u590D\u4F4D",
+      "UpdatedAt": "2026-07-08T13:51:48.1352112+08:00"
+    },
+    {
+      "Name": "\u8F93\u9001\u7EBF",
+      "Health": 2,
+      "Message": "\u68C0\u6D4B\u5230\u5F02\u5E38\uFF0C\u8BF7\u4EBA\u5DE5\u590D\u4F4D",
+      "UpdatedAt": "2026-07-08T13:52:11.4225424+08:00"
+    },
+    {
+      "Name": "\u51FA\u5E93\u5DE5\u4F4D",
+      "Health": 2,
+      "Message": "\u68C0\u6D4B\u5230\u5F02\u5E38\uFF0C\u8BF7\u4EBA\u5DE5\u590D\u4F4D",
+      "UpdatedAt": "2026-07-08T13:52:11.0014646+08:00"
+    },
+    {
+      "Name": "\u626B\u7801\u5668",
+      "Health": 2,
+      "Message": "\u68C0\u6D4B\u5230\u5F02\u5E38\uFF0C\u8BF7\u4EBA\u5DE5\u590D\u4F4D",
+      "UpdatedAt": "2026-07-08T13:52:11.2075931+08:00"
+    }
+  ],
+  "AlertSettings": {
+    "MinThreshold": 2,
+    "MaxThreshold": 18
+  },
+  "DailyThroughput": 0,
+  "CurrentAction": "\u8BBE\u5907\u5F02\u5E38\uFF1A\u8F93\u9001\u7EBF",
+  "BeatSeconds": 12.5
+}
