@@ -77,12 +77,37 @@ public class AppStateController : ControllerBase
     public IActionResult SaveDropdowns([FromBody] AppState updatedState)
     {
         var state = _repo.Load();
-        if (updatedState.PalletNumbers?.Count > 0) state.PalletNumbers = updatedState.PalletNumbers;
-        if (updatedState.ToolingNumbers?.Count > 0) state.ToolingNumbers = updatedState.ToolingNumbers;
-        if (updatedState.ProjectNumbers?.Count > 0) state.ProjectNumbers = updatedState.ProjectNumbers;
-        if (updatedState.ModelTypes?.Count > 0) state.ModelTypes = updatedState.ModelTypes;
-        if (updatedState.CustomerNames?.Count > 0) state.CustomerNames = updatedState.CustomerNames;
+        SaveDropdownCategory(state, updatedState.PalletNumbers, "PalletNumber");
+        SaveDropdownCategory(state, updatedState.ToolingNumbers, "ToolingNumber");
+        SaveDropdownCategory(state, updatedState.ProjectNumbers, "ProjectNumber");
+        SaveDropdownCategory(state, updatedState.ModelTypes, "ModelType");
+        SaveDropdownCategory(state, updatedState.CustomerNames, "CustomerName");
         _repo.Save(state);
         return Ok(new { message = "下拉选项已保存" });
+    }
+
+    private void SaveDropdownCategory(AppState state, List<string>? items, string category)
+    {
+        if (items is null || items.Count == 0) return;
+        foreach (var value in items)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                _repo.SaveDropdownOption(category, value);
+        }
+        // 重新加载
+        LoadDropdownCategory(state, category);
+    }
+
+    private void LoadDropdownCategory(AppState state, string category)
+    {
+        var loaded = _repo.LoadDropdownOptions(category);
+        switch (category)
+        {
+            case "PalletNumber": state.PalletNumbers = loaded; break;
+            case "ToolingNumber": state.ToolingNumbers = loaded; break;
+            case "ProjectNumber": state.ProjectNumbers = loaded; break;
+            case "ModelType": state.ModelTypes = loaded; break;
+            case "CustomerName": state.CustomerNames = loaded; break;
+        }
     }
 }

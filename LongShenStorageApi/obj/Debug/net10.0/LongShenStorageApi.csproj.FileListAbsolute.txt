@@ -67,3 +67,4 @@ C:\Users\jiaohengfei\Desktop\上海隆深\上海隆深软件\隆深软件程序\
 C:\Users\jiaohengfei\Desktop\上海隆深\上海隆深软件\隆深软件程序\LongShenStorageApi\obj\Debug\net10.0\LongShenStorageApi.pdb
 C:\Users\jiaohengfei\Desktop\上海隆深\上海隆深软件\隆深软件程序\LongShenStorageApi\obj\Debug\net10.0\LongShenStorageApi.genruntimeconfig.cache
 C:\Users\jiaohengfei\Desktop\上海隆深\上海隆深软件\隆深软件程序\LongShenStorageApi\obj\Debug\net10.0\ref\LongShenStorageApi.dll
+C:\Users\jiaohengfei\Desktop\上海隆深\上海隆深软件\隆深软件程序\LongShenStorageApi\bin\Debug\net10.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll

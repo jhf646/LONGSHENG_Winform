@@ -1357,13 +1357,13 @@ public partial class Form1 : Form
     {
         var glyph = title switch
         {
-            var value when value.Contains("库存") => "",
-            var value when value.Contains("入库") => "",
-            var value when value.Contains("出库") => "",
-            var value when value.Contains("货位") => "",
-            var value when value.Contains("查询") => "",
-            var value when value.Contains("报表") => "",
-            _ => ""
+            var value when value.Contains("库存") => "📦",
+            var value when value.Contains("入库") => "📥",
+            var value when value.Contains("出库") => "📤",
+            var value when value.Contains("货位") => "🗄️",
+            var value when value.Contains("查询") => "🔍",
+            var value when value.Contains("报表") => "📊",
+            _ => "📋"
         };
 
         return CreateGlyphBadgeIcon(glyph, 14F, AccentSoft, AccentColor, Color.WhiteSmoke);
@@ -1373,10 +1373,10 @@ public partial class Form1 : Form
     {
         return title switch
         {
-            "库存数量" => CreateGlyphBadgeIcon("", 15F, Color.FromArgb(226, 237, 247), Color.FromArgb(34, 104, 148), Color.WhiteSmoke),
-            "占用库位" => CreateGlyphBadgeIcon("", 15F, Color.FromArgb(248, 232, 211), Color.FromArgb(176, 104, 35), Color.WhiteSmoke),
-            "空闲库位" => CreateGlyphBadgeIcon("", 15F, Color.FromArgb(225, 241, 231), Color.FromArgb(56, 128, 88), Color.WhiteSmoke),
-            _ => CreateGlyphBadgeIcon("", 15F, Color.FromArgb(248, 227, 224), Color.FromArgb(187, 74, 57), Color.WhiteSmoke)
+            "库存数量" => CreateGlyphBadgeIcon("📦", 15F, Color.FromArgb(226, 237, 247), Color.FromArgb(34, 104, 148), Color.WhiteSmoke),
+            "占用库位" => CreateGlyphBadgeIcon("🔴", 15F, Color.FromArgb(248, 232, 211), Color.FromArgb(176, 104, 35), Color.WhiteSmoke),
+            "空闲库位" => CreateGlyphBadgeIcon("🟢", 15F, Color.FromArgb(225, 241, 231), Color.FromArgb(56, 128, 88), Color.WhiteSmoke),
+            _ => CreateGlyphBadgeIcon("⚠️", 15F, Color.FromArgb(248, 227, 224), Color.FromArgb(187, 74, 57), Color.WhiteSmoke)
         };
     }
 
@@ -1384,16 +1384,16 @@ public partial class Form1 : Form
     {
         var glyph = text switch
         {
-            var value when value.Contains("导出") => "",
-            var value when value.Contains("打印") => "",
-            var value when value.Contains("保存") => "",
-            var value when value.Contains("刷新") => "",
-            var value when value.Contains("查询") => "",
-            var value when value.Contains("重置") => "",
-            var value when value.Contains("清空") => "",
-            var value when value.Contains("释放") => "",
-            var value when value.Contains("执行") => "",
-            _ => ""
+            var value when value.Contains("导出") => "📥",
+            var value when value.Contains("打印") => "🖨️",
+            var value when value.Contains("保存") => "💾",
+            var value when value.Contains("刷新") => "🔄",
+            var value when value.Contains("查询") => "🔍",
+            var value when value.Contains("重置") => "🔄",
+            var value when value.Contains("清空") => "🗑️",
+            var value when value.Contains("释放") => "🔓",
+            var value when value.Contains("执行") => "▶️",
+            _ => "📋"
         };
 
         return CreateGlyphBadgeIcon(
@@ -1402,6 +1402,27 @@ public partial class Form1 : Form
             primary ? Color.FromArgb(32, 85, 132) : AccentSoft,
             primary ? Color.FromArgb(255, 244, 224) : AccentColor,
             primary ? Color.White : Color.WhiteSmoke);
+    }
+
+    private Image CreateTabIcon(string title, bool selected)
+    {
+        var glyph = title switch
+        {
+            "库存总览" => "📊",
+            "人工入库" => "📥",
+            "人工出库" => "📤",
+            "货位管理" => "🗄️",
+            "台账查询" => "🔍",
+            "报表与预警" => "📊",
+            _ => "📋"
+        };
+
+        return CreateGlyphBadgeIcon(
+            glyph,
+            11.5F,
+            selected ? Color.FromArgb(234, 221, 199) : Color.FromArgb(214, 220, 214),
+            selected ? AccentColor : Color.FromArgb(117, 130, 139),
+            Color.WhiteSmoke);
     }
 
     private Bitmap CreateGlyphBadgeIcon(string glyph, float glyphFontSize, Color badgeColor, Color innerColor, Color glyphColor)
@@ -1417,7 +1438,7 @@ public partial class Form1 : Form
 
         using var iconBackBrush = new SolidBrush(innerColor);
         using var glyphBrush = new SolidBrush(glyphColor);
-        using var glyphFont = new Font("Segoe Fluent Icons", glyphFontSize, FontStyle.Regular, GraphicsUnit.Point);
+        using var glyphFont = new Font("Segoe UI Emoji", glyphFontSize, FontStyle.Regular, GraphicsUnit.Point);
         graphics.FillEllipse(iconBackBrush, 5, 5, 18, 18);
         var rect = new RectangleF(5, 5, 18, 18);
         using var stringFormat = new StringFormat
@@ -1427,27 +1448,6 @@ public partial class Form1 : Form
         };
         graphics.DrawString(glyph, glyphFont, glyphBrush, rect, stringFormat);
         return bitmap;
-    }
-
-    private Image CreateTabIcon(string title, bool selected)
-    {
-        var glyph = title switch
-        {
-            "库存总览" => "",
-            "人工入库" => "",
-            "人工出库" => "",
-            "货位管理" => "",
-            "台账查询" => "",
-            "报表与预警" => "",
-            _ => ""
-        };
-
-        return CreateGlyphBadgeIcon(
-            glyph,
-            11.5F,
-            selected ? Color.FromArgb(234, 221, 199) : Color.FromArgb(214, 220, 214),
-            selected ? AccentColor : Color.FromArgb(117, 130, 139),
-            Color.WhiteSmoke);
     }
 
     private void StyleInputControl(Control control)

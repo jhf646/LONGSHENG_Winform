@@ -13,6 +13,7 @@ public sealed class SqlServerRepository
             ?? "Server=DESKTOP-L654TSI;Database=LongShenStorage;User Id=sa;Password=123456;TrustServerCertificate=True;";
         EnsureDatabase();
         EnsureTables();
+        SeedDefaultAdmin();
     }
 
     private void EnsureDatabase()
@@ -64,7 +65,16 @@ public sealed class SqlServerRepository
             IF EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('WorkpieceRecords') AND name='Code') ALTER TABLE WorkpieceRecords DROP COLUMN Code;
             IF EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('WorkpieceRecords') AND name='Batch') ALTER TABLE WorkpieceRecords DROP COLUMN Batch;
             IF EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('LedgerEntries') AND name='WorkpieceCode') ALTER TABLE LedgerEntries DROP COLUMN WorkpieceCode;
-            IF EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('LedgerEntries') AND name='Batch') ALTER TABLE LedgerEntries DROP COLUMN Batch;";
+            IF EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('LedgerEntries') AND name='Batch') ALTER TABLE LedgerEntries DROP COLUMN Batch;
+            -- 用户表
+            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Users' AND xtype='U')
+            CREATE TABLE Users (Id UNIQUEIDENTIFIER PRIMARY KEY, Username NVARCHAR(100) NOT NULL UNIQUE, PasswordHash NVARCHAR(500) NOT NULL, Role INT NOT NULL DEFAULT 1, DisplayName NVARCHAR(100) NOT NULL DEFAULT '', IsActive BIT NOT NULL DEFAULT 1, CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE());
+            -- 下拉选项持久化表
+            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='DropdownOptions' AND xtype='U')
+            CREATE TABLE DropdownOptions (Category NVARCHAR(50) NOT NULL, Value NVARCHAR(200) NOT NULL, PRIMARY KEY (Category, Value));
+            -- 角色权限表
+            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='RolePermissions' AND xtype='U')
+            CREATE TABLE RolePermissions (RoleName NVARCHAR(50) NOT NULL, PageId NVARCHAR(50) NOT NULL, PRIMARY KEY (RoleName, PageId));";
         cmd.ExecuteNonQuery();
     }
 
@@ -74,13 +84,15 @@ public sealed class SqlServerRepository
     {
         try
         {
-            return new AppState
+            var state = new AppState
             {
                 AlertSettings = LoadAlertSettings(),
                 Slots = LoadSlots(),
                 Inventory = LoadInventory(),
                 Ledger = LoadLedger()
             };
+            LoadDropdownsIntoState(state);
+            return state;
         }
         catch { return CreateDefaultState(); }
     }
@@ -129,6 +141,61 @@ public sealed class SqlServerRepository
         while (reader.Read())
             list.Add(new LedgerEntry { Id = reader.GetGuid(0), Type = (TransactionType)reader.GetInt32(1), Timestamp = reader.GetDateTime(2), OperatorName = reader.GetString(3), SlotCode = reader.GetString(4), ActionDescription = reader.GetString(5), PalletNumber = reader.GetString(6), ToolingNumber = reader.GetString(7), ProjectNumber = reader.GetString(8), ModelType = reader.GetString(9), WorkOrder = reader.GetString(10), CellNumber = reader.GetString(11), ComponentSections = reader.GetInt32(12), CustomerName = reader.GetString(13) });
         return list;
+    }
+
+    // ===== 下拉选项持久化 =====
+
+    public List<string> LoadDropdownOptions(string category)
+    {
+        var list = new List<string>();
+        using var conn = new SqlConnection(_connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand("SELECT Value FROM DropdownOptions WHERE Category = @c ORDER BY Value", conn);
+        cmd.Parameters.AddWithValue("@c", category);
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read()) list.Add(reader.GetString(0));
+        return list;
+    }
+
+    public void SaveDropdownOption(string category, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return;
+        using var conn = new SqlConnection(_connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand("IF NOT EXISTS (SELECT 1 FROM DropdownOptions WHERE Category = @c AND Value = @v) INSERT INTO DropdownOptions (Category, Value) VALUES (@c, @v)", conn);
+        cmd.Parameters.AddWithValue("@c", category);
+        cmd.Parameters.AddWithValue("@v", value);
+        cmd.ExecuteNonQuery();
+    }
+
+    public void LoadDropdownsIntoState(AppState state)
+    {
+        state.PalletNumbers = LoadDropdownOptions("PalletNumber");
+        state.ToolingNumbers = LoadDropdownOptions("ToolingNumber");
+        state.ProjectNumbers = LoadDropdownOptions("ProjectNumber");
+        state.ModelTypes = LoadDropdownOptions("ModelType");
+        state.CustomerNames = LoadDropdownOptions("CustomerName");
+
+        // 从已有工件记录中提取并补充
+        if (state.Inventory.Count > 0)
+        {
+            AddUnique(state.PalletNumbers, state.Inventory.Where(r => !string.IsNullOrWhiteSpace(r.PalletNumber)).Select(r => r.PalletNumber));
+            AddUnique(state.ToolingNumbers, state.Inventory.Where(r => !string.IsNullOrWhiteSpace(r.ToolingNumber)).Select(r => r.ToolingNumber));
+            AddUnique(state.ProjectNumbers, state.Inventory.Where(r => !string.IsNullOrWhiteSpace(r.ProjectNumber)).Select(r => r.ProjectNumber));
+            AddUnique(state.ModelTypes, state.Inventory.Where(r => !string.IsNullOrWhiteSpace(r.ModelType)).Select(r => r.ModelType));
+            AddUnique(state.CustomerNames, state.Inventory.Where(r => !string.IsNullOrWhiteSpace(r.CustomerName)).Select(r => r.CustomerName));
+        }
+
+        // 默认托盘号
+        if (state.PalletNumbers.Count == 0)
+            state.PalletNumbers = Enumerable.Range(1, 66).Select(i => $"T{i}").ToList();
+    }
+
+    private static void AddUnique(List<string> list, IEnumerable<string> items)
+    {
+        foreach (var item in items)
+            if (!string.IsNullOrWhiteSpace(item) && !list.Contains(item, StringComparer.OrdinalIgnoreCase))
+                list.Add(item);
     }
 
     // ===== 保存方法 =====
@@ -361,5 +428,158 @@ public sealed class SqlServerRepository
                 for (var level = 1; level <= 8; level++)
                     slots.Add(new StorageSlot { RowNumber = row, ColumnNumber = column, LevelNumber = level, Zone = $"{row}排", SlotCode = $"{row}排-{column}列-{level}层", IsOccupied = false });
         return slots;
+    }
+
+    // ===== 用户管理 =====
+
+    public User? GetUserByUsername(string username)
+    {
+        using var conn = new SqlConnection(_connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand("SELECT Id, Username, PasswordHash, Role, DisplayName, IsActive, CreatedAt FROM Users WHERE Username = @u", conn);
+        cmd.Parameters.AddWithValue("@u", username);
+        using var reader = cmd.ExecuteReader();
+        if (reader.Read())
+            return new User { Id = reader.GetGuid(0), Username = reader.GetString(1), PasswordHash = reader.GetString(2), Role = (UserRole)reader.GetInt32(3), DisplayName = reader.GetString(4), IsActive = reader.GetBoolean(5), CreatedAt = reader.GetDateTime(6) };
+        return null;
+    }
+
+    public User? GetUserById(Guid id)
+    {
+        using var conn = new SqlConnection(_connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand("SELECT Id, Username, PasswordHash, Role, DisplayName, IsActive, CreatedAt FROM Users WHERE Id = @id", conn);
+        cmd.Parameters.AddWithValue("@id", id);
+        using var reader = cmd.ExecuteReader();
+        if (reader.Read())
+            return new User { Id = reader.GetGuid(0), Username = reader.GetString(1), PasswordHash = reader.GetString(2), Role = (UserRole)reader.GetInt32(3), DisplayName = reader.GetString(4), IsActive = reader.GetBoolean(5), CreatedAt = reader.GetDateTime(6) };
+        return null;
+    }
+
+    public List<User> GetAllUsers()
+    {
+        var list = new List<User>();
+        using var conn = new SqlConnection(_connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand("SELECT Id, Username, PasswordHash, Role, DisplayName, IsActive, CreatedAt FROM Users ORDER BY CreatedAt", conn);
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+            list.Add(new User { Id = reader.GetGuid(0), Username = reader.GetString(1), PasswordHash = reader.GetString(2), Role = (UserRole)reader.GetInt32(3), DisplayName = reader.GetString(4), IsActive = reader.GetBoolean(5), CreatedAt = reader.GetDateTime(6) });
+        return list;
+    }
+
+    public void CreateUser(User user)
+    {
+        using var conn = new SqlConnection(_connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand("INSERT INTO Users (Id, Username, PasswordHash, Role, DisplayName, IsActive, CreatedAt) VALUES (@Id, @U, @P, @R, @D, @A, @C)", conn);
+        cmd.Parameters.AddWithValue("@Id", user.Id);
+        cmd.Parameters.AddWithValue("@U", user.Username);
+        cmd.Parameters.AddWithValue("@P", user.PasswordHash);
+        cmd.Parameters.AddWithValue("@R", (int)user.Role);
+        cmd.Parameters.AddWithValue("@D", user.DisplayName);
+        cmd.Parameters.AddWithValue("@A", user.IsActive);
+        cmd.Parameters.AddWithValue("@C", user.CreatedAt);
+        cmd.ExecuteNonQuery();
+    }
+
+    public void UpdateUser(User user)
+    {
+        using var conn = new SqlConnection(_connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand("UPDATE Users SET Role = @R, DisplayName = @D, IsActive = @A, PasswordHash = @P WHERE Id = @Id", conn);
+        cmd.Parameters.AddWithValue("@Id", user.Id);
+        cmd.Parameters.AddWithValue("@R", (int)user.Role);
+        cmd.Parameters.AddWithValue("@D", user.DisplayName);
+        cmd.Parameters.AddWithValue("@A", user.IsActive);
+        cmd.Parameters.AddWithValue("@P", user.PasswordHash);
+        cmd.ExecuteNonQuery();
+    }
+
+    public void DeleteUser(Guid id)
+    {
+        using var conn = new SqlConnection(_connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand("DELETE FROM Users WHERE Id = @Id", conn);
+        cmd.Parameters.AddWithValue("@Id", id);
+        cmd.ExecuteNonQuery();
+    }
+
+    public bool SeedDefaultAdmin()
+    {
+        if (GetUserByUsername("admin") is not null) return false;
+        CreateUser(new User
+        {
+            Username = "admin",
+            PasswordHash = BCryptHash("admin123"),
+            Role = UserRole.Admin,
+            DisplayName = "管理员",
+            IsActive = true
+        });
+        CreateUser(new User
+        {
+            Username = "operator",
+            PasswordHash = BCryptHash("123456"),
+            Role = UserRole.Operator,
+            DisplayName = "操作员",
+            IsActive = true
+        });
+        CreateUser(new User
+        {
+            Username = "viewer",
+            PasswordHash = BCryptHash("123456"),
+            Role = UserRole.Viewer,
+            DisplayName = "查看员",
+            IsActive = true
+        });
+        return true;
+    }
+
+    private static string BCryptHash(string password)
+    {
+        // 简化版哈希（生产环境应使用 BCrypt）
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        var bytes = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password + "LongShenSalt2026"));
+        return Convert.ToBase64String(bytes);
+    }
+
+    public bool VerifyPassword(string password, string hash)
+    {
+        return BCryptHash(password) == hash;
+    }
+
+    // ===== 角色权限 =====
+
+    public List<string> GetRolePermissions(string roleName)
+    {
+        var list = new List<string>();
+        using var conn = new SqlConnection(_connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand("SELECT PageId FROM RolePermissions WHERE RoleName = @r", conn);
+        cmd.Parameters.AddWithValue("@r", roleName);
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read()) list.Add(reader.GetString(0));
+        return list;
+    }
+
+    public void SaveRolePermissions(string roleName, List<string> pageIds)
+    {
+        using var conn = new SqlConnection(_connectionString);
+        conn.Open();
+        using var tx = conn.BeginTransaction();
+        using var del = new SqlCommand("DELETE FROM RolePermissions WHERE RoleName = @r", conn, tx);
+        del.Parameters.AddWithValue("@r", roleName);
+        del.ExecuteNonQuery();
+
+        using var ins = new SqlCommand("INSERT INTO RolePermissions (RoleName, PageId) VALUES (@r, @p)", conn, tx);
+        ins.Parameters.Add("@r", System.Data.SqlDbType.NVarChar, 50);
+        ins.Parameters.Add("@p", System.Data.SqlDbType.NVarChar, 50);
+        foreach (var pageId in pageIds)
+        {
+            ins.Parameters["@r"].Value = roleName;
+            ins.Parameters["@p"].Value = pageId;
+            ins.ExecuteNonQuery();
+        }
+        tx.Commit();
     }
 }

@@ -139,7 +139,120 @@ public sealed class LedgerQueryRequest
 /// </summary>
 public sealed class ReportRequest
 {
-    public string ReportType { get; set; } = "进出台账"; // 进出台账, 库存清单, 操作记录
+    public string ReportType { get; set; } = "进出台账";
     public int MinThreshold { get; set; } = 2;
     public int MaxThreshold { get; set; } = 18;
+}
+
+// ===== 用户与权限 =====
+
+public enum UserRole
+{
+    Admin = 0,    // 管理员：全部权限
+    Operator = 1, // 操作员：入库/出库/查询
+    Viewer = 2    // 查看者：仅查看仪表盘和台账
+}
+
+public sealed class User
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Username { get; set; } = string.Empty;
+    public string PasswordHash { get; set; } = string.Empty;
+    public UserRole Role { get; set; } = UserRole.Operator;
+    public string DisplayName { get; set; } = string.Empty;
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+}
+
+public sealed class LoginRequest
+{
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+}
+
+public sealed class LoginResponse
+{
+    public string Token { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public Guid UserId { get; set; }
+}
+
+public sealed class CreateUserRequest
+{
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public UserRole Role { get; set; } = UserRole.Operator;
+    public string DisplayName { get; set; } = string.Empty;
+}
+
+public sealed class UpdateUserRequest
+{
+    public string? DisplayName { get; set; }
+    public UserRole Role { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+public sealed class PasswordResetRequest
+{
+    public string NewPassword { get; set; } = string.Empty;
+}
+
+// ===== 角色权限管理 =====
+
+/// <summary>
+/// 已定义的页面列表（用于角色权限配置）
+/// </summary>
+public static class AppPages
+{
+    public const string Dashboard = "dashboard";
+    public const string Inbound = "inbound";
+    public const string Outbound = "outbound";
+    public const string Slots = "slots";
+    public const string Ledger = "ledger";
+    public const string Report = "report";
+    public const string Alert = "alert";
+    public const string Users = "users";
+
+    public static readonly Dictionary<string, string> PageNames = new()
+    {
+        { Dashboard, "仪表盘" },
+        { Inbound, "入库管理" },
+        { Outbound, "出库管理" },
+        { Slots, "货位管理" },
+        { Ledger, "台账查询" },
+        { Report, "报表统计" },
+        { Alert, "库存预警" },
+        { Users, "用户管理" }
+    };
+
+    /// <summary>获取某个角色默认允许的页面</summary>
+    public static List<string> GetDefaultPages(UserRole role) => role switch
+    {
+        UserRole.Admin => new List<string> { Dashboard, Inbound, Outbound, Slots, Ledger, Report, Alert, Users },
+        UserRole.Operator => new List<string> { Dashboard, Inbound, Outbound, Slots, Ledger, Report, Alert },
+        UserRole.Viewer => new List<string> { Dashboard, Slots, Ledger, Report },
+        _ => new List<string> { Dashboard }
+    };
+}
+
+public sealed class RolePermissionRequest
+{
+    public string Role { get; set; } = string.Empty;
+    public List<string> Pages { get; set; } = new();
+}
+
+public sealed class RolePermissionsResponse
+{
+    public string Role { get; set; } = string.Empty;
+    public string RoleDisplayName { get; set; } = string.Empty;
+    public List<string> AllowedPages { get; set; } = new();
+    public List<PageInfo> AllPages { get; set; } = new();
+}
+
+public sealed class PageInfo
+{
+    public string Id { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public bool Allowed { get; set; }
 }
