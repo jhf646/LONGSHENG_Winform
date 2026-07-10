@@ -11,6 +11,27 @@ public sealed class SqlServerRepository
         _connectionString = "Server=DESKTOP-L654TSI;Database=LongShenStorage;User Id=sa;Password=123456;TrustServerCertificate=True;";
         EnsureDatabase();
         EnsureTables();
+        ClearAllData();
+    }
+
+    public void ClearAllData()
+    {
+        try
+        {
+            using var conn = new SqlConnection(_connectionString);
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"
+                DELETE FROM WorkpieceRecords;
+                DELETE FROM LedgerEntries;
+                DELETE FROM AlertSettings;
+                UPDATE StorageSlots SET IsOccupied = 0, WorkpieceId = NULL;";
+            cmd.ExecuteNonQuery();
+        }
+        catch
+        {
+            // 清空操作失败时静默处理
+        }
     }
 
     private void EnsureDatabase()
@@ -54,13 +75,19 @@ public sealed class SqlServerRepository
             IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WorkpieceRecords' AND xtype='U')
             CREATE TABLE WorkpieceRecords (
                 Id UNIQUEIDENTIFIER PRIMARY KEY,
-                Code NVARCHAR(200) NOT NULL,
-                Batch NVARCHAR(200) NOT NULL,
                 InboundTime DATETIME2 NOT NULL DEFAULT GETDATE(),
                 SlotCode NVARCHAR(50) NOT NULL,
                 LastOperator NVARCHAR(100) NOT NULL DEFAULT '',
                 LastUpdated DATETIME2 NOT NULL DEFAULT GETDATE(),
-                Notes NVARCHAR(500) NOT NULL DEFAULT ''
+                Notes NVARCHAR(500) NOT NULL DEFAULT '',
+                PalletNumber NVARCHAR(50) NOT NULL DEFAULT '',
+                ToolingNumber NVARCHAR(200) NOT NULL DEFAULT '',
+                ProjectNumber NVARCHAR(200) NOT NULL DEFAULT '',
+                ModelType NVARCHAR(200) NOT NULL DEFAULT '',
+                WorkOrder NVARCHAR(200) NOT NULL DEFAULT '',
+                CellNumber NVARCHAR(200) NOT NULL DEFAULT '',
+                ComponentSections INT NOT NULL DEFAULT 1,
+                CustomerName NVARCHAR(200) NOT NULL DEFAULT ''
             );
 
             IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='LedgerEntries' AND xtype='U')
@@ -69,11 +96,70 @@ public sealed class SqlServerRepository
                 Type INT NOT NULL,
                 Timestamp DATETIME2 NOT NULL DEFAULT GETDATE(),
                 OperatorName NVARCHAR(100) NOT NULL DEFAULT '',
-                WorkpieceCode NVARCHAR(200) NOT NULL DEFAULT '',
-                Batch NVARCHAR(200) NOT NULL DEFAULT '',
                 SlotCode NVARCHAR(50) NOT NULL DEFAULT '',
-                ActionDescription NVARCHAR(500) NOT NULL DEFAULT ''
-            );";
+                ActionDescription NVARCHAR(500) NOT NULL DEFAULT '',
+                PalletNumber NVARCHAR(50) NOT NULL DEFAULT '',
+                ToolingNumber NVARCHAR(200) NOT NULL DEFAULT '',
+                ProjectNumber NVARCHAR(200) NOT NULL DEFAULT '',
+                ModelType NVARCHAR(200) NOT NULL DEFAULT '',
+                WorkOrder NVARCHAR(200) NOT NULL DEFAULT '',
+                CellNumber NVARCHAR(200) NOT NULL DEFAULT '',
+                ComponentSections INT NOT NULL DEFAULT 0,
+                CustomerName NVARCHAR(200) NOT NULL DEFAULT ''
+            );
+
+            -- 向下兼容：给旧表添加缺失的列（如果不存在）
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('WorkpieceRecords') AND name='PalletNumber')
+                ALTER TABLE WorkpieceRecords ADD PalletNumber NVARCHAR(50) NOT NULL DEFAULT '';
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('WorkpieceRecords') AND name='ToolingNumber')
+                ALTER TABLE WorkpieceRecords ADD ToolingNumber NVARCHAR(200) NOT NULL DEFAULT '';
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('WorkpieceRecords') AND name='ProjectNumber')
+                ALTER TABLE WorkpieceRecords ADD ProjectNumber NVARCHAR(200) NOT NULL DEFAULT '';
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('WorkpieceRecords') AND name='ModelType')
+                ALTER TABLE WorkpieceRecords ADD ModelType NVARCHAR(200) NOT NULL DEFAULT '';
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('WorkpieceRecords') AND name='WorkOrder')
+                ALTER TABLE WorkpieceRecords ADD WorkOrder NVARCHAR(200) NOT NULL DEFAULT '';
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('WorkpieceRecords') AND name='CellNumber')
+                ALTER TABLE WorkpieceRecords ADD CellNumber NVARCHAR(200) NOT NULL DEFAULT '';
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('WorkpieceRecords') AND name='ComponentSections')
+                ALTER TABLE WorkpieceRecords ADD ComponentSections INT NOT NULL DEFAULT 1;
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('WorkpieceRecords') AND name='CustomerName')
+                ALTER TABLE WorkpieceRecords ADD CustomerName NVARCHAR(200) NOT NULL DEFAULT '';
+
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('LedgerEntries') AND name='PalletNumber')
+                ALTER TABLE LedgerEntries ADD PalletNumber NVARCHAR(50) NOT NULL DEFAULT '';
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('LedgerEntries') AND name='ToolingNumber')
+                ALTER TABLE LedgerEntries ADD ToolingNumber NVARCHAR(200) NOT NULL DEFAULT '';
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('LedgerEntries') AND name='ProjectNumber')
+                ALTER TABLE LedgerEntries ADD ProjectNumber NVARCHAR(200) NOT NULL DEFAULT '';
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('LedgerEntries') AND name='ModelType')
+                ALTER TABLE LedgerEntries ADD ModelType NVARCHAR(200) NOT NULL DEFAULT '';
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('LedgerEntries') AND name='WorkOrder')
+                ALTER TABLE LedgerEntries ADD WorkOrder NVARCHAR(200) NOT NULL DEFAULT '';
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('LedgerEntries') AND name='CellNumber')
+                ALTER TABLE LedgerEntries ADD CellNumber NVARCHAR(200) NOT NULL DEFAULT '';
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('LedgerEntries') AND name='ComponentSections')
+                ALTER TABLE LedgerEntries ADD ComponentSections INT NOT NULL DEFAULT 0;
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('LedgerEntries') AND name='CustomerName')
+                ALTER TABLE LedgerEntries ADD CustomerName NVARCHAR(200) NOT NULL DEFAULT '';
+
+            -- 删除旧字段前先删除相关的默认值约束
+            DECLARE @sql NVARCHAR(MAX);
+            SELECT @sql = COALESCE(@sql + ';', '')
+                + 'ALTER TABLE [' + OBJECT_SCHEMA_NAME(parent_object_id) + '].[' + OBJECT_NAME(parent_object_id) + '] DROP CONSTRAINT [' + name + ']'
+            FROM sys.default_constraints
+            WHERE parent_object_id IN (OBJECT_ID('WorkpieceRecords'), OBJECT_ID('LedgerEntries'))
+              AND COL_NAME(parent_object_id, parent_column_id) IN ('Code', 'Batch', 'WorkpieceCode');
+            IF @sql IS NOT NULL EXEC sp_executesql @sql;
+
+            IF EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('WorkpieceRecords') AND name='Code')
+                ALTER TABLE WorkpieceRecords DROP COLUMN Code;
+            IF EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('WorkpieceRecords') AND name='Batch')
+                ALTER TABLE WorkpieceRecords DROP COLUMN Batch;
+            IF EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('LedgerEntries') AND name='WorkpieceCode')
+                ALTER TABLE LedgerEntries DROP COLUMN WorkpieceCode;
+            IF EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('LedgerEntries') AND name='Batch')
+                ALTER TABLE LedgerEntries DROP COLUMN Batch;";
         cmd.ExecuteNonQuery();
     }
 
@@ -161,20 +247,28 @@ public sealed class SqlServerRepository
         var list = new List<WorkpieceRecord>();
         using var conn = new SqlConnection(_connectionString);
         conn.Open();
-        using var cmd = new SqlCommand("SELECT Id, Code, Batch, InboundTime, SlotCode, LastOperator, LastUpdated, Notes FROM WorkpieceRecords ORDER BY InboundTime DESC", conn);
+        using var cmd = new SqlCommand(@"SELECT Id, InboundTime, SlotCode, LastOperator, LastUpdated, Notes,
+            PalletNumber, ToolingNumber, ProjectNumber, ModelType, WorkOrder, CellNumber, ComponentSections, CustomerName
+            FROM WorkpieceRecords ORDER BY InboundTime DESC", conn);
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
             list.Add(new WorkpieceRecord
             {
                 Id = reader.GetGuid(0),
-                Code = reader.GetString(1),
-                Batch = reader.GetString(2),
-                InboundTime = reader.GetDateTime(3),
-                SlotCode = reader.GetString(4),
-                LastOperator = reader.GetString(5),
-                LastUpdated = reader.GetDateTime(6),
-                Notes = reader.GetString(7)
+                InboundTime = reader.GetDateTime(1),
+                SlotCode = reader.GetString(2),
+                LastOperator = reader.GetString(3),
+                LastUpdated = reader.GetDateTime(4),
+                Notes = reader.GetString(5),
+                PalletNumber = reader.GetString(6),
+                ToolingNumber = reader.GetString(7),
+                ProjectNumber = reader.GetString(8),
+                ModelType = reader.GetString(9),
+                WorkOrder = reader.GetString(10),
+                CellNumber = reader.GetString(11),
+                ComponentSections = reader.GetInt32(12),
+                CustomerName = reader.GetString(13)
             });
         }
         return list;
@@ -185,7 +279,9 @@ public sealed class SqlServerRepository
         var list = new List<LedgerEntry>();
         using var conn = new SqlConnection(_connectionString);
         conn.Open();
-        using var cmd = new SqlCommand("SELECT Id, Type, Timestamp, OperatorName, WorkpieceCode, Batch, SlotCode, ActionDescription FROM LedgerEntries ORDER BY Timestamp DESC", conn);
+        using var cmd = new SqlCommand(@"SELECT Id, Type, Timestamp, OperatorName, SlotCode, ActionDescription,
+            PalletNumber, ToolingNumber, ProjectNumber, ModelType, WorkOrder, CellNumber, ComponentSections, CustomerName
+            FROM LedgerEntries ORDER BY Timestamp DESC", conn);
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
@@ -195,10 +291,16 @@ public sealed class SqlServerRepository
                 Type = (TransactionType)reader.GetInt32(1),
                 Timestamp = reader.GetDateTime(2),
                 OperatorName = reader.GetString(3),
-                WorkpieceCode = reader.GetString(4),
-                Batch = reader.GetString(5),
-                SlotCode = reader.GetString(6),
-                ActionDescription = reader.GetString(7)
+                SlotCode = reader.GetString(4),
+                ActionDescription = reader.GetString(5),
+                PalletNumber = reader.GetString(6),
+                ToolingNumber = reader.GetString(7),
+                ProjectNumber = reader.GetString(8),
+                ModelType = reader.GetString(9),
+                WorkOrder = reader.GetString(10),
+                CellNumber = reader.GetString(11),
+                ComponentSections = reader.GetInt32(12),
+                CustomerName = reader.GetString(13)
             });
         }
         return list;
@@ -259,31 +361,49 @@ public sealed class SqlServerRepository
             USING (SELECT @Id AS Id) AS source
             ON target.Id = source.Id
             WHEN MATCHED THEN
-                UPDATE SET Code = @Code, Batch = @Batch, InboundTime = @InTime, SlotCode = @Slot,
-                           LastOperator = @Op, LastUpdated = @Upd, Notes = @Notes
+                UPDATE SET InboundTime = @InTime, SlotCode = @Slot,
+                           LastOperator = @Op, LastUpdated = @Upd, Notes = @Notes,
+                           PalletNumber = @Pallet, ToolingNumber = @Tool, ProjectNumber = @Proj,
+                           ModelType = @Model, WorkOrder = @Wo, CellNumber = @Cell,
+                           ComponentSections = @Comp, CustomerName = @Cust
             WHEN NOT MATCHED THEN
-                INSERT (Id, Code, Batch, InboundTime, SlotCode, LastOperator, LastUpdated, Notes)
-                VALUES (@Id, @Code, @Batch, @InTime, @Slot, @Op, @Upd, @Notes);", conn, tx);
+                INSERT (Id, InboundTime, SlotCode, LastOperator, LastUpdated, Notes,
+                        PalletNumber, ToolingNumber, ProjectNumber, ModelType, WorkOrder, CellNumber,
+                        ComponentSections, CustomerName)
+                VALUES (@Id, @InTime, @Slot, @Op, @Upd, @Notes,
+                        @Pallet, @Tool, @Proj, @Model, @Wo, @Cell, @Comp, @Cust);", conn, tx);
 
         cmd.Parameters.Add("@Id", System.Data.SqlDbType.UniqueIdentifier);
-        cmd.Parameters.Add("@Code", System.Data.SqlDbType.NVarChar, 200);
-        cmd.Parameters.Add("@Batch", System.Data.SqlDbType.NVarChar, 200);
         cmd.Parameters.Add("@InTime", System.Data.SqlDbType.DateTime2);
         cmd.Parameters.Add("@Slot", System.Data.SqlDbType.NVarChar, 50);
         cmd.Parameters.Add("@Op", System.Data.SqlDbType.NVarChar, 100);
         cmd.Parameters.Add("@Upd", System.Data.SqlDbType.DateTime2);
         cmd.Parameters.Add("@Notes", System.Data.SqlDbType.NVarChar, 500);
+        cmd.Parameters.Add("@Pallet", System.Data.SqlDbType.NVarChar, 50);
+        cmd.Parameters.Add("@Tool", System.Data.SqlDbType.NVarChar, 200);
+        cmd.Parameters.Add("@Proj", System.Data.SqlDbType.NVarChar, 200);
+        cmd.Parameters.Add("@Model", System.Data.SqlDbType.NVarChar, 200);
+        cmd.Parameters.Add("@Wo", System.Data.SqlDbType.NVarChar, 200);
+        cmd.Parameters.Add("@Cell", System.Data.SqlDbType.NVarChar, 200);
+        cmd.Parameters.Add("@Comp", System.Data.SqlDbType.Int);
+        cmd.Parameters.Add("@Cust", System.Data.SqlDbType.NVarChar, 200);
 
         foreach (var item in inventory)
         {
             cmd.Parameters["@Id"].Value = item.Id;
-            cmd.Parameters["@Code"].Value = item.Code;
-            cmd.Parameters["@Batch"].Value = item.Batch;
             cmd.Parameters["@InTime"].Value = item.InboundTime;
             cmd.Parameters["@Slot"].Value = item.SlotCode;
             cmd.Parameters["@Op"].Value = item.LastOperator;
             cmd.Parameters["@Upd"].Value = item.LastUpdated;
             cmd.Parameters["@Notes"].Value = item.Notes;
+            cmd.Parameters["@Pallet"].Value = item.PalletNumber;
+            cmd.Parameters["@Tool"].Value = item.ToolingNumber;
+            cmd.Parameters["@Proj"].Value = item.ProjectNumber;
+            cmd.Parameters["@Model"].Value = item.ModelType;
+            cmd.Parameters["@Wo"].Value = item.WorkOrder;
+            cmd.Parameters["@Cell"].Value = item.CellNumber;
+            cmd.Parameters["@Comp"].Value = item.ComponentSections;
+            cmd.Parameters["@Cust"].Value = item.CustomerName;
             cmd.ExecuteNonQuery();
         }
     }
@@ -296,19 +416,31 @@ public sealed class SqlServerRepository
             ON target.Id = source.Id
             WHEN MATCHED THEN
                 UPDATE SET Type = @Type, Timestamp = @Ts, OperatorName = @Op,
-                           WorkpieceCode = @Wc, Batch = @Batch, SlotCode = @Slot, ActionDescription = @Desc
+                           SlotCode = @Slot, ActionDescription = @Desc,
+                           PalletNumber = @Pallet, ToolingNumber = @Tool, ProjectNumber = @Proj,
+                           ModelType = @Model, WorkOrder = @Wo, CellNumber = @Cell,
+                           ComponentSections = @Comp, CustomerName = @Cust
             WHEN NOT MATCHED THEN
-                INSERT (Id, Type, Timestamp, OperatorName, WorkpieceCode, Batch, SlotCode, ActionDescription)
-                VALUES (@Id, @Type, @Ts, @Op, @Wc, @Batch, @Slot, @Desc);", conn, tx);
+                INSERT (Id, Type, Timestamp, OperatorName, SlotCode, ActionDescription,
+                        PalletNumber, ToolingNumber, ProjectNumber, ModelType, WorkOrder, CellNumber,
+                        ComponentSections, CustomerName)
+                VALUES (@Id, @Type, @Ts, @Op, @Slot, @Desc,
+                        @Pallet, @Tool, @Proj, @Model, @Wo, @Cell, @Comp, @Cust);", conn, tx);
 
         cmd.Parameters.Add("@Id", System.Data.SqlDbType.UniqueIdentifier);
         cmd.Parameters.Add("@Type", System.Data.SqlDbType.Int);
         cmd.Parameters.Add("@Ts", System.Data.SqlDbType.DateTime2);
         cmd.Parameters.Add("@Op", System.Data.SqlDbType.NVarChar, 100);
-        cmd.Parameters.Add("@Wc", System.Data.SqlDbType.NVarChar, 200);
-        cmd.Parameters.Add("@Batch", System.Data.SqlDbType.NVarChar, 200);
         cmd.Parameters.Add("@Slot", System.Data.SqlDbType.NVarChar, 50);
         cmd.Parameters.Add("@Desc", System.Data.SqlDbType.NVarChar, 500);
+        cmd.Parameters.Add("@Pallet", System.Data.SqlDbType.NVarChar, 50);
+        cmd.Parameters.Add("@Tool", System.Data.SqlDbType.NVarChar, 200);
+        cmd.Parameters.Add("@Proj", System.Data.SqlDbType.NVarChar, 200);
+        cmd.Parameters.Add("@Model", System.Data.SqlDbType.NVarChar, 200);
+        cmd.Parameters.Add("@Wo", System.Data.SqlDbType.NVarChar, 200);
+        cmd.Parameters.Add("@Cell", System.Data.SqlDbType.NVarChar, 200);
+        cmd.Parameters.Add("@Comp", System.Data.SqlDbType.Int);
+        cmd.Parameters.Add("@Cust", System.Data.SqlDbType.NVarChar, 200);
 
         foreach (var entry in ledger)
         {
@@ -316,10 +448,16 @@ public sealed class SqlServerRepository
             cmd.Parameters["@Type"].Value = (int)entry.Type;
             cmd.Parameters["@Ts"].Value = entry.Timestamp;
             cmd.Parameters["@Op"].Value = entry.OperatorName;
-            cmd.Parameters["@Wc"].Value = entry.WorkpieceCode;
-            cmd.Parameters["@Batch"].Value = entry.Batch;
             cmd.Parameters["@Slot"].Value = entry.SlotCode;
             cmd.Parameters["@Desc"].Value = entry.ActionDescription;
+            cmd.Parameters["@Pallet"].Value = entry.PalletNumber;
+            cmd.Parameters["@Tool"].Value = entry.ToolingNumber;
+            cmd.Parameters["@Proj"].Value = entry.ProjectNumber;
+            cmd.Parameters["@Model"].Value = entry.ModelType;
+            cmd.Parameters["@Wo"].Value = entry.WorkOrder;
+            cmd.Parameters["@Cell"].Value = entry.CellNumber;
+            cmd.Parameters["@Comp"].Value = entry.ComponentSections;
+            cmd.Parameters["@Cust"].Value = entry.CustomerName;
             cmd.ExecuteNonQuery();
         }
     }

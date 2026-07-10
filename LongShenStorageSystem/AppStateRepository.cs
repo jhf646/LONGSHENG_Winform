@@ -49,6 +49,11 @@ public sealed class AppStateRepository
         state.Slots ??= [];
         state.Ledger ??= [];
         state.AlertSettings ??= new InventoryAlertSettings();
+        state.PalletNumbers ??= Enumerable.Range(1, 66).Select(i => $"T{i}").ToList();
+        state.ToolingNumbers ??= [];
+        state.ProjectNumbers ??= [];
+        state.ModelTypes ??= [];
+        state.CustomerNames ??= [];
 
         if (!HasExpectedSlotLayout(state.Slots))
         {

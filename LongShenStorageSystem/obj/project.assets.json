@@ -1184,11 +1184,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\jiaohengfei\\Desktop\\上海隆深\\上海隆深软件\\隆深软件程序\\LongShenStorageSystem\\LongShenStorageSystem.csproj",
+      "projectUniqueName": "c:\\Users\\jiaohengfei\\Desktop\\上海隆深\\上海隆深软件\\隆深软件程序\\LongShenStorageSystem\\LongShenStorageSystem.csproj",
       "projectName": "LongShenStorageSystem",
-      "projectPath": "C:\\Users\\jiaohengfei\\Desktop\\上海隆深\\上海隆深软件\\隆深软件程序\\LongShenStorageSystem\\LongShenStorageSystem.csproj",
+      "projectPath": "c:\\Users\\jiaohengfei\\Desktop\\上海隆深\\上海隆深软件\\隆深软件程序\\LongShenStorageSystem\\LongShenStorageSystem.csproj",
       "packagesPath": "C:\\Users\\jiaohengfei\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\jiaohengfei\\Desktop\\上海隆深\\上海隆深软件\\隆深软件程序\\LongShenStorageSystem\\obj\\",
+      "outputPath": "c:\\Users\\jiaohengfei\\Desktop\\上海隆深\\上海隆深软件\\隆深软件程序\\LongShenStorageSystem\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -1275,5 +1275,13 @@
         "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.301/PortableRuntimeIdentifierGraph.json"
       }
     }
-  }
+  },
+  "logs": [
+    {
+      "code": "NU1900",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "获取包漏洞数据时出错: 无法加载源 https://api.nuget.org/v3/index.json 的服务索引。"
+    }
+  ]
 }

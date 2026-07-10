@@ -35,10 +35,16 @@ public partial class Form1 : Form
     private Label _lblAlert = null!;
     private Label _lblHomeStatus = null!;
 
-    private TextBox _txtInboundCode = null!;
-    private TextBox _txtInboundBatch = null!;
     private TextBox _txtInboundOperator = null!;
     private TextBox _txtInboundSlot = null!;
+    private ComboBox _cmbInboundPallet = null!;
+    private ComboBox _cmbInboundTooling = null!;
+    private ComboBox _cmbInboundProject = null!;
+    private ComboBox _cmbInboundModel = null!;
+    private TextBox _txtInboundWorkOrder = null!;
+    private TextBox _txtInboundCellNumber = null!;
+    private NumericUpDown _numInboundComponentSections = null!;
+    private ComboBox _cmbInboundCustomer = null!;
     private TextBox _txtInboundNotes = null!;
     private DataGridView _gridInboundPreview = null!;
 
@@ -271,27 +277,110 @@ public partial class Form1 : Form
         var split = CreateSplitPage();
 
         var formPanel = CreateCardPanel("入库信息录入");
-        var form = CreateIndustrialFormLayout();
-        _txtInboundCode = AddIndustrialTextBox(form, 0, "工件编码");
-        _txtInboundBatch = AddIndustrialTextBox(form, 1, "批次号");
-        _txtInboundOperator = AddIndustrialTextBox(form, 2, "操作人员");
-        _txtInboundSlot = AddIndustrialTextBox(form, 3, "指定货位(可选)");
-        _txtInboundNotes = AddIndustrialMultilineTextBox(form, 4, "备注 / 扫码结果");
+
+        // 外层滚动容器
+        var scrollPanel = new Panel
+        {
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            Padding = new Padding(6)
+        };
+
+        // 双列表单布局
+        var form = new TableLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            ColumnCount = 2,
+            RowCount = 8,
+            Padding = new Padding(18, 12, 18, 12),
+            Width = 860,
+            Height = 700,
+            AutoSize = true,
+            AutoSizeMode = AutoSizeMode.GrowAndShrink
+        };
+        form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+        form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+        for (var i = 0; i < 8; i++)
+            form.RowStyles.Add(new RowStyle(SizeType.Absolute, 80F));
+
+        _cmbInboundPallet = AddInboundComboBox(form, 0, 0, "托盘号", _state.PalletNumbers);
+        _cmbInboundTooling = AddInboundComboBox(form, 0, 1, "工装号", _state.ToolingNumbers);
+        _txtInboundOperator = AddInboundField(form, 2, 0, "操作人员", out _);
+        _cmbInboundProject = AddInboundComboBox(form, 2, 1, "项目号", _state.ProjectNumbers);
+        _txtInboundSlot = AddInboundField(form, 3, 0, "指定货位(可选)", out _);
+        _cmbInboundModel = AddInboundComboBox(form, 3, 1, "型号", _state.ModelTypes);
+
+        _txtInboundWorkOrder = AddInboundField(form, 4, 0, "工单号", out _);
+        _txtInboundCellNumber = AddInboundField(form, 4, 1, "电解槽编号", out _);
+
+        // 组件节数(1-20)
+        _numInboundComponentSections = new NumericUpDown
+        {
+            Dock = DockStyle.Fill,
+            Font = new Font("Microsoft YaHei UI", 14F, FontStyle.Bold),
+            Minimum = 1,
+            Maximum = 20,
+            Value = 1,
+            BackColor = Color.White,
+            BorderStyle = BorderStyle.FixedSingle,
+            TextAlign = HorizontalAlignment.Center
+        };
+        AddInboundControl(form, 5, 0, "组件节数", _numInboundComponentSections);
+
+        _cmbInboundCustomer = AddInboundComboBox(form, 5, 1, "客户名称", _state.CustomerNames);
+
+        // 备注占两列
+        _txtInboundNotes = new TextBox
+        {
+            Dock = DockStyle.Fill,
+            Font = new Font("Microsoft YaHei UI", 12F),
+            Multiline = true,
+            BackColor = Color.White,
+            BorderStyle = BorderStyle.FixedSingle,
+            ScrollBars = ScrollBars.Vertical,
+            MinimumSize = new Size(0, 60)
+        };
+        var notesContainer = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            Margin = new Padding(0, 0, 0, 6)
+        };
+        notesContainer.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
+        notesContainer.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+        notesContainer.Controls.Add(new Label
+        {
+            Text = "备注",
+            Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold),
+            ForeColor = TextPrimary,
+            Dock = DockStyle.Fill
+        }, 0, 0);
+        notesContainer.Controls.Add(_txtInboundNotes, 0, 1);
+        form.Controls.Add(notesContainer, 0, 6);
+        form.SetColumnSpan(notesContainer, 2);
 
         var buttonPanel = new FlowLayoutPanel
         {
-            Dock = DockStyle.Bottom,
-            Height = 72,
+            Dock = DockStyle.Fill,
             FlowDirection = FlowDirection.LeftToRight,
-            Padding = new Padding(18, 14, 0, 0)
+            Padding = new Padding(0, 8, 0, 0),
+            Margin = new Padding(0)
         };
 
         buttonPanel.Controls.Add(CreateIndustrialActionButton("自动分配入库", (_, _) => HandleInbound(false), true));
         buttonPanel.Controls.Add(CreateIndustrialActionButton("指定货位入库", (_, _) => HandleInbound(true), false));
         buttonPanel.Controls.Add(CreateIndustrialActionButton("清空录入", (_, _) => ClearInboundInputs(), false));
 
-        formPanel.Controls.Add(form);
-        formPanel.Controls.Add(buttonPanel);
+        var buttonHost = new Panel { Dock = DockStyle.Fill };
+        buttonHost.Controls.Add(buttonPanel);
+        form.Controls.Add(buttonHost, 0, 7);
+        form.SetColumnSpan(buttonHost, 2);
+        // 让按钮行自适应
+        form.RowStyles[7] = new RowStyle(SizeType.Absolute, 60F);
+
+        scrollPanel.Controls.Add(form);
+        formPanel.Controls.Add(scrollPanel);
 
         var rightPanel = CreateCardPanel("待入库 / 最近入库记录");
         _gridInboundPreview = CreateGrid();
@@ -302,6 +391,76 @@ public partial class Form1 : Form
         split.Panel2.Controls.Add(rightPanel);
         page.Controls.Add(split);
         return page;
+    }
+
+    private TextBox AddInboundField(TableLayoutPanel parent, int row, int col, string label, out Panel container)
+    {
+        var textBox = new TextBox
+        {
+            Dock = DockStyle.Fill,
+            Font = new Font("Microsoft YaHei UI", 14F, FontStyle.Bold),
+            BackColor = Color.White,
+            BorderStyle = BorderStyle.FixedSingle,
+            MinimumSize = new Size(0, 42)
+        };
+        container = AddInboundControl(parent, row, col, label, textBox);
+        return textBox;
+    }
+
+    private ComboBox AddInboundComboBox(TableLayoutPanel parent, int row, int col, string label, List<string> items)
+    {
+        var combo = new ComboBox
+        {
+            Dock = DockStyle.Fill,
+            DropDownStyle = ComboBoxStyle.DropDown,
+            Font = new Font("Microsoft YaHei UI", 14F, FontStyle.Bold),
+            AutoCompleteMode = AutoCompleteMode.SuggestAppend,
+            AutoCompleteSource = AutoCompleteSource.ListItems,
+            IntegralHeight = false,
+            MinimumSize = new Size(0, 42)
+        };
+        if (items.Count > 0)
+        {
+            combo.Items.AddRange(items.ToArray());
+        }
+        AddInboundControl(parent, row, col, label, combo);
+        return combo;
+    }
+
+    private Panel AddInboundControl(TableLayoutPanel parent, int row, int col, string label, Control control)
+    {
+        var container = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 1,
+            RowCount = 2,
+            Margin = new Padding(4, 0, 4, 6)
+        };
+        container.RowStyles.Add(new RowStyle(SizeType.Absolute, 26F));
+        container.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+
+        container.Controls.Add(new Label
+        {
+            Text = label,
+            Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold),
+            ForeColor = TextPrimary,
+            Dock = DockStyle.Fill
+        }, 0, 0);
+
+        if (control is TextBox tb)
+        {
+            tb.BackColor = Color.White;
+            tb.BorderStyle = BorderStyle.FixedSingle;
+        }
+        else if (control is ComboBox cb)
+        {
+            cb.FlatStyle = FlatStyle.Flat;
+            cb.BackColor = Color.White;
+        }
+
+        container.Controls.Add(control, 0, 1);
+        parent.Controls.Add(container, col, row);
+        return container;
     }
 
     private TabPage CreateOutboundPage()
@@ -596,7 +755,7 @@ public partial class Form1 : Form
         AddCompactControl(queryLayout, 0, 0, "出入库类型", _cmbSearchType);
 
         _txtSearchCode = AddCompactField(queryLayout, 1, 0, "工件编码");
-        _txtSearchBatch = AddCompactField(queryLayout, 2, 0, "批次号");
+        _txtSearchBatch = AddCompactField(queryLayout, 2, 0, "工单号");
         _txtSearchOperator = AddCompactField(queryLayout, 3, 0, "操作人员");
 
         _dtSearchStart = AddDateField(queryLayout, 0, 1, "开始时间");
@@ -1465,6 +1624,22 @@ public partial class Form1 : Form
         _numMinThreshold.Value = _state.AlertSettings.MinThreshold;
         _numMaxThreshold.Value = _state.AlertSettings.MaxThreshold;
         RefreshOutboundOptions();
+        RefreshComboSource(_cmbInboundPallet, _state.PalletNumbers);
+        RefreshComboSource(_cmbInboundTooling, _state.ToolingNumbers);
+        RefreshComboSource(_cmbInboundProject, _state.ProjectNumbers);
+        RefreshComboSource(_cmbInboundModel, _state.ModelTypes);
+        RefreshComboSource(_cmbInboundCustomer, _state.CustomerNames);
+    }
+
+    private static void RefreshComboSource(ComboBox combo, List<string> items)
+    {
+        var currentText = combo.Text;
+        combo.Items.Clear();
+        if (items.Count > 0)
+        {
+            combo.Items.AddRange(items.ToArray());
+        }
+        combo.Text = currentText;
     }
 
     private static void ResetBinding<T>(BindingList<T> binding, IEnumerable<T> items)
@@ -1478,20 +1653,12 @@ public partial class Form1 : Form
 
     private void HandleInbound(bool useSpecifiedSlot)
     {
-        var code = _txtInboundCode.Text.Trim();
-        var batch = _txtInboundBatch.Text.Trim();
         var operatorName = _txtInboundOperator.Text.Trim();
         var requestedSlot = _txtInboundSlot.Text.Trim();
 
-        if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(batch) || string.IsNullOrWhiteSpace(operatorName))
+        if (string.IsNullOrWhiteSpace(operatorName))
         {
-            MessageBox.Show("请完整填写工件编码、批次和操作人员。", "入库校验", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
-        }
-
-        if (_state.Inventory.Any(item => item.Code.Equals(code, StringComparison.OrdinalIgnoreCase)))
-        {
-            MessageBox.Show("工件编码已存在，系统要求一物一码。", "入库校验", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            MessageBox.Show("请输入操作人员。", "入库校验", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
@@ -1502,10 +1669,33 @@ public partial class Form1 : Form
             return;
         }
 
+        // 收集新字段
+        var palletNumber = _cmbInboundPallet.Text.Trim();
+        var toolingNumber = _cmbInboundTooling.Text.Trim();
+        var projectNumber = _cmbInboundProject.Text.Trim();
+        var modelType = _cmbInboundModel.Text.Trim();
+        var workOrder = _txtInboundWorkOrder.Text.Trim();
+        var cellNumber = _txtInboundCellNumber.Text.Trim();
+        var componentSections = (int)_numInboundComponentSections.Value;
+        var customerName = _cmbInboundCustomer.Text.Trim();
+
+        // 将新输入的值保存到下拉选项中（可拓展）
+        SaveNewComboItem(_state.PalletNumbers, palletNumber);
+        SaveNewComboItem(_state.ToolingNumbers, toolingNumber);
+        SaveNewComboItem(_state.ProjectNumbers, projectNumber);
+        SaveNewComboItem(_state.ModelTypes, modelType);
+        SaveNewComboItem(_state.CustomerNames, customerName);
+
         var record = new WorkpieceRecord
         {
-            Code = code,
-            Batch = batch,
+            PalletNumber = palletNumber,
+            ToolingNumber = toolingNumber,
+            ProjectNumber = projectNumber,
+            ModelType = modelType,
+            WorkOrder = workOrder,
+            CellNumber = cellNumber,
+            ComponentSections = componentSections,
+            CustomerName = customerName,
             SlotCode = targetSlot.SlotCode,
             InboundTime = DateTime.Now,
             LastOperator = operatorName,
@@ -1516,9 +1706,17 @@ public partial class Form1 : Form
         targetSlot.IsOccupied = true;
         targetSlot.WorkpieceId = record.Id;
         _state.Inventory.Add(record);
-        AddLedgerEntry(TransactionType.Inbound, record, operatorName, $"工件入库至 {targetSlot.SlotCode}");
+        AddLedgerEntry(TransactionType.Inbound, record, operatorName, $"托盘{record.PalletNumber}入库至 {targetSlot.SlotCode}");
         SaveAndRefresh();
         ClearInboundInputs();
+    }
+
+    private static void SaveNewComboItem(List<string> items, string value)
+    {
+        if (!string.IsNullOrWhiteSpace(value) && !items.Contains(value, StringComparer.OrdinalIgnoreCase))
+        {
+            items.Add(value);
+        }
     }
 
     private void HandleOutbound()
@@ -1576,8 +1774,14 @@ public partial class Form1 : Form
             Type = type,
             Timestamp = DateTime.Now,
             OperatorName = operatorName,
-            WorkpieceCode = record.Code,
-            Batch = record.Batch,
+            PalletNumber = record.PalletNumber,
+            ToolingNumber = record.ToolingNumber,
+            ProjectNumber = record.ProjectNumber,
+            ModelType = record.ModelType,
+            WorkOrder = record.WorkOrder,
+            CellNumber = record.CellNumber,
+            ComponentSections = record.ComponentSections,
+            CustomerName = record.CustomerName,
             SlotCode = record.SlotCode,
             ActionDescription = description
         });
@@ -1806,7 +2010,7 @@ public partial class Form1 : Form
         {
             Dock = DockStyle.Bottom,
             Height = 12,
-            Text = workpiece?.Code ?? string.Empty,
+            Text = workpiece?.PalletNumber ?? string.Empty,
             Font = new Font("Microsoft YaHei UI", 7F),
             ForeColor = Color.FromArgb(86, 96, 112),
             TextAlign = ContentAlignment.MiddleCenter,
@@ -1877,7 +2081,7 @@ public partial class Form1 : Form
     {
         return workpiece is null
             ? $"{slot.SlotCode}\n状态：空闲\n点击后可直接指定入库"
-            : $"{slot.SlotCode}\n状态：占用\n工件：{workpiece.Code}\n批次：{workpiece.Batch}";
+            : $"{slot.SlotCode}\n状态：占用\n托盘：{workpiece.PalletNumber}\n工单：{workpiece.WorkOrder}";
     }
 
     private void BindSlotTileClick(Control control, StorageSlot slot)
@@ -1901,7 +2105,7 @@ public partial class Form1 : Form
         _selectedVisualSlot = slot;
         _txtInboundSlot.Text = slot.SlotCode;
         _tabControl.SelectedTab = _tabControl.TabPages.Cast<TabPage>().FirstOrDefault(page => page.Text == "人工入库");
-        BeginInvoke(() => _txtInboundCode.Focus());
+        BeginInvoke(() => _cmbInboundPallet.Focus());
     }
 
     private void UpdateSelectedSlotDetails()
@@ -1926,7 +2130,7 @@ public partial class Form1 : Form
         _lblSelectedSlotCode.Text = $"库位：{slot.SlotCode}";
         _lblSelectedSlotStatus.Text = $"状态：{(slot.IsOccupied ? "占用" : "空闲")}";
         _lblSelectedSlotLocation.Text = $"位置：{slot.RowNumber}排 / {slot.ColumnNumber}列 / {slot.LevelNumber}层";
-        _lblSelectedSlotWorkpiece.Text = $"工件：{workpiece?.Code ?? "无"} {(workpiece is null ? string.Empty : $"| 批次：{workpiece.Batch}")}";
+        _lblSelectedSlotWorkpiece.Text = $"托盘：{workpiece?.PalletNumber ?? "无"}";
         _lblSelectedSlotHint.Text = slot.IsOccupied
             ? "操作：该库位已占用，点击库位会弹出工件详情，可用于核对位置与追溯。"
             : "操作：该库位空闲，点击库位后系统会自动跳转到人工入库页并带入指定货位。";
@@ -1940,8 +2144,16 @@ public partial class Form1 : Form
             $"库位号：{slot.SlotCode}",
             $"货架位置：{slot.RowNumber}排 {slot.ColumnNumber}列 {slot.LevelNumber}层",
             $"状态：{(slot.IsOccupied ? "占用" : "空闲")}",
-            $"工件编码：{workpiece?.Code ?? "无"}",
-            $"批次号：{workpiece?.Batch ?? "无"}",
+            $"托盘号：{workpiece?.PalletNumber ?? "无"}",
+            $"工单号：{workpiece?.WorkOrder ?? "无"}",
+            $"托盘号：{workpiece?.PalletNumber ?? "无"}",
+            $"工装号：{workpiece?.ToolingNumber ?? "无"}",
+            $"项目号：{workpiece?.ProjectNumber ?? "无"}",
+            $"型号：{workpiece?.ModelType ?? "无"}",
+            $"工单号：{workpiece?.WorkOrder ?? "无"}",
+            $"电解槽编号：{workpiece?.CellNumber ?? "无"}",
+            $"组件节数：{workpiece?.ComponentSections ?? 0}",
+            $"客户名称：{workpiece?.CustomerName ?? "无"}",
             $"入库时间：{(workpiece is null ? "无" : workpiece.InboundTime.ToString("yyyy-MM-dd HH:mm:ss"))}",
             $"操作人员：{workpiece?.LastOperator ?? "无"}",
             $"备注：{workpiece?.Notes ?? "无"}"
@@ -1985,18 +2197,26 @@ public partial class Form1 : Form
 
     private void RefreshOutboundOptions()
     {
-        var available = _state.Inventory.OrderBy(item => item.Code).ToList();
+        var available = _state.Inventory.OrderBy(item => item.PalletNumber).ToList();
         _cmbOutboundWorkpiece.DataSource = null;
         _cmbOutboundWorkpiece.DataSource = available;
-        _cmbOutboundWorkpiece.DisplayMember = nameof(WorkpieceRecord.Code);
+        _cmbOutboundWorkpiece.DisplayMember = nameof(WorkpieceRecord.PalletNumber);
     }
 
     private void ClearInboundInputs()
     {
-        _txtInboundCode.Clear();
-        _txtInboundBatch.Clear();
         _txtInboundOperator.Clear();
         _txtInboundSlot.Clear();
+        // 下拉框不清除文本，重置到空
+        _cmbInboundPallet.SelectedIndex = -1;
+        _cmbInboundTooling.SelectedIndex = -1;
+        _cmbInboundProject.SelectedIndex = -1;
+        _cmbInboundModel.SelectedIndex = -1;
+        // 批次入库保留工单号和电解槽编号
+        // _txtInboundWorkOrder.Clear();
+        // _txtInboundCellNumber.Clear();
+        _numInboundComponentSections.Value = 1;
+        _cmbInboundCustomer.SelectedIndex = -1;
         _txtInboundNotes.Clear();
     }
 
@@ -2011,8 +2231,8 @@ public partial class Form1 : Form
 
         var filtered = _state.Ledger.Where(entry =>
             (typeFilter is null || entry.Type == typeFilter.Value) &&
-            (string.IsNullOrWhiteSpace(_txtSearchCode.Text) || entry.WorkpieceCode.Contains(_txtSearchCode.Text.Trim(), StringComparison.OrdinalIgnoreCase)) &&
-            (string.IsNullOrWhiteSpace(_txtSearchBatch.Text) || entry.Batch.Contains(_txtSearchBatch.Text.Trim(), StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrWhiteSpace(_txtSearchCode.Text) || entry.PalletNumber.Contains(_txtSearchCode.Text.Trim(), StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrWhiteSpace(_txtSearchBatch.Text) || entry.WorkOrder.Contains(_txtSearchBatch.Text.Trim(), StringComparison.OrdinalIgnoreCase)) &&
             (string.IsNullOrWhiteSpace(_txtSearchOperator.Text) || entry.OperatorName.Contains(_txtSearchOperator.Text.Trim(), StringComparison.OrdinalIgnoreCase)) &&
             entry.Timestamp >= _dtSearchStart.Value &&
             entry.Timestamp <= _dtSearchEnd.Value)
@@ -2089,25 +2309,25 @@ public partial class Form1 : Form
 
     private string[] BuildLedgerReportLines()
     {
-        var lines = new List<string> { "时间,类型,操作人员,工件编码,批次,货位,说明" };
+        var lines = new List<string> { "时间,类型,操作人员,托盘号,工装号,项目号,型号,工单号,电解槽编号,组件节数,客户名称,货位,说明" };
         lines.AddRange(_state.Ledger.OrderByDescending(entry => entry.Timestamp).Select(entry =>
-            $"{entry.Timestamp:yyyy-MM-dd HH:mm:ss},{entry.Type},{entry.OperatorName},{entry.WorkpieceCode},{entry.Batch},{entry.SlotCode},{entry.ActionDescription}"));
+            $"{entry.Timestamp:yyyy-MM-dd HH:mm:ss},{entry.Type},{entry.OperatorName},{entry.PalletNumber},{entry.ToolingNumber},{entry.ProjectNumber},{entry.ModelType},{entry.WorkOrder},{entry.CellNumber},{entry.ComponentSections},{entry.CustomerName},{entry.SlotCode},{entry.ActionDescription}"));
         return lines.ToArray();
     }
 
     private string[] BuildInventoryReportLines()
     {
-        var lines = new List<string> { "工件编码,批次,入库时间,货位,最后操作人,备注" };
+        var lines = new List<string> { "托盘号,工装号,项目号,型号,工单号,电解槽编号,组件节数,客户名称,入库时间,货位,操作人员,备注" };
         lines.AddRange(_state.Inventory.OrderBy(item => item.SlotCode).Select(item =>
-            $"{item.Code},{item.Batch},{item.InboundTime:yyyy-MM-dd HH:mm:ss},{item.SlotCode},{item.LastOperator},{item.Notes}"));
+            $"{item.PalletNumber},{item.ToolingNumber},{item.ProjectNumber},{item.ModelType},{item.WorkOrder},{item.CellNumber},{item.ComponentSections},{item.CustomerName},{item.InboundTime:yyyy-MM-dd HH:mm:ss},{item.SlotCode},{item.LastOperator},{item.Notes}"));
         return lines.ToArray();
     }
 
     private string[] BuildOperationReportLines()
     {
-        var lines = new List<string> { "时间,操作人员,工件编码,货位,操作说明" };
+        var lines = new List<string> { "时间,操作人员,托盘号,工装号,项目号,型号,工单号,电解槽编号,客户名称,货位,操作说明" };
         lines.AddRange(_state.Ledger.OrderByDescending(entry => entry.Timestamp).Select(entry =>
-            $"{entry.Timestamp:yyyy-MM-dd HH:mm:ss},{entry.OperatorName},{entry.WorkpieceCode},{entry.SlotCode},{entry.ActionDescription}"));
+            $"{entry.Timestamp:yyyy-MM-dd HH:mm:ss},{entry.OperatorName},{entry.PalletNumber},{entry.ToolingNumber},{entry.ProjectNumber},{entry.ModelType},{entry.WorkOrder},{entry.CellNumber},{entry.CustomerName},{entry.SlotCode},{entry.ActionDescription}"));
         return lines.ToArray();
     }
 
