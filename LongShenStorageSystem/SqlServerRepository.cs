@@ -11,7 +11,6 @@ public sealed class SqlServerRepository
         _connectionString = "Server=DESKTOP-L654TSI;Database=LongShenStorage;User Id=sa;Password=123456;TrustServerCertificate=True;";
         EnsureDatabase();
         EnsureTables();
-        ClearAllData();
     }
 
     public void ClearAllData()
