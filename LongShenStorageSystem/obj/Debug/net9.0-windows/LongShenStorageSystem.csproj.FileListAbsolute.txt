@@ -51,3 +51,4 @@ C:\Users\jiaohengfei\Desktop\上海隆深\上海隆深软件\隆深软件程序\
 C:\Users\jiaohengfei\Desktop\上海隆深\上海隆深软件\隆深软件程序\LongShenStorageSystem\bin\Debug\net9.0-windows\runtimes\win-x86\native\Microsoft.Data.SqlClient.SNI.dll
 C:\Users\jiaohengfei\Desktop\上海隆深\上海隆深软件\隆深软件程序\LongShenStorageSystem\obj\Debug\net9.0-windows\LongShenStorageSystem.csproj.AssemblyReference.cache
 C:\Users\jiaohengfei\Desktop\上海隆深\上海隆深软件\隆深软件程序\LongShenStorageSystem\obj\Debug\net9.0-windows\LongShen.A5826A15.Up2Date
+c:\Users\jiaohengfei\Desktop\上海隆深\上海隆深软件\隆深软件程序\LongShenStorageSystem\obj\Debug\net9.0-windows\LongShenStorageSystem.sourcelink.json
