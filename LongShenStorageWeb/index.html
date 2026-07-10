@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>上海隆深库存管理系统</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- 头部 -->
+<div class="header">
+    <div class="logo-area">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23c99147' rx='8'/%3E%3Ctext x='50' y='62' text-anchor='middle' fill='white' font-size='40' font-weight='bold' font-family='sans-serif'%3ELS%3C/text%3E%3C/svg%3E" alt="Logo">
+        <div class="title-group">
+            <h1>上海隆深库存管理系统</h1>
+            <p>工件入库、货位分配、台账追溯、库存预警一体化管理</p>
+        </div>
+    </div>
+    <div class="status-badge" id="headerStatus">库存状态：加载中...</div>
+</div>
+
+<!-- Tab 导航 -->
+<div class="tabs" id="tabNav">
+    <button class="tab-btn active" data-tab="dashboard"><span class="icon">📊</span>库存总览</button>
+    <button class="tab-btn" data-tab="inbound"><span class="icon">📥</span>人工入库</button>
+    <button class="tab-btn" data-tab="outbound"><span class="icon">📤</span>人工出库</button>
+    <button class="tab-btn" data-tab="slots"><span class="icon">🗄️</span>货位管理</button>
+    <button class="tab-btn" data-tab="ledger"><span class="icon">📋</span>台账查询</button>
+    <button class="tab-btn" data-tab="report"><span class="icon">📈</span>报表与预警</button>
+</div>
+
+<!-- ==================== 库存总览 ==================== -->
+<div class="tab-content active" id="tab-dashboard">
+    <div class="metrics" id="metricsContainer">
+        <div class="metric-card"><div class="metric-icon">📦</div><div class="metric-info"><div class="metric-label">库存数量</div><div class="metric-value" id="metricCount">0</div></div></div>
+        <div class="metric-card"><div class="metric-icon">🔴</div><div class="metric-info"><div class="metric-label">占用库位</div><div class="metric-value" id="metricOccupied">0</div></div></div>
+        <div class="metric-card"><div class="metric-icon">🟢</div><div class="metric-info"><div class="metric-label">空闲库位</div><div class="metric-value" id="metricFree">0</div></div></div>
+        <div class="metric-card"><div class="metric-icon">⚠️</div><div class="metric-info"><div class="metric-label">库存预警</div><div class="metric-value" id="metricAlert">正常</div></div></div>
+    </div>
+
+    <div class="card"><div class="card-accent"></div><div class="card-header">库位可视化监控</div>
+    <div class="card-body">
+        <div class="legend">
+            <div class="legend-item"><div class="legend-swatch" style="background:#e0f3e5"></div>空闲</div>
+            <div class="legend-item"><div class="legend-swatch" style="background:#ffe4e4"></div>占用</div>
+            <div class="legend-item"><div class="legend-swatch" style="background:#fff4c5;border-color:#bd7b1f"></div>选中</div>
+        </div>
+        <div class="slot-visual" id="dashboardSlots"></div>
+    </div></div>
+
+    <div class="card"><div class="card-accent"></div><div class="card-header">最近入库记录</div>
+    <div class="card-body"><div class="table-wrap" id="recentInventory"><table class="data-table"><thead><tr><th>托盘号</th><th>工装号</th><th>货位</th><th>操作人员</th><th>入库时间</th></tr></thead><tbody id="recentBody"></tbody></table></div></div></div>
+</div>
+
+<!-- ==================== 人工入库 ==================== -->
+<div class="tab-content" id="tab-inbound">
+    <div class="card"><div class="card-accent"></div><div class="card-header">入库信息录入</div>
+    <div class="card-body">
+        <div class="form-grid" id="inboundForm">
+            <div class="form-group"><label>托盘号</label><input type="text" id="inPallet" list="dlPallet" placeholder="T1-T66"></div>
+            <div class="form-group"><label>工装号</label><input type="text" id="inTooling" list="dlTooling" placeholder="自行输入"></div>
+            <div class="form-group"><label>项目号</label><input type="text" id="inProject" list="dlProject" placeholder="自行输入"></div>
+            <div class="form-group"><label>型号</label><input type="text" id="inModel" list="dlModel" placeholder="字母+数字组合"></div>
+            <div class="form-group"><label>工单号</label><input type="text" id="inWorkOrder" placeholder="字母+数字组合，批次入库保留"></div>
+            <div class="form-group"><label>电解槽编号</label><input type="text" id="inCellNumber" placeholder="字母+数字组合，批次入库保留"></div>
+            <div class="form-group"><label>组件节数(1-20)</label><input type="number" id="inComponentSections" min="1" max="20" value="1"></div>
+            <div class="form-group"><label>客户名称</label><input type="text" id="inCustomer" list="dlCustomer" placeholder="自行输入"></div>
+            <div class="form-group"><label>操作人员</label><input type="text" id="inOperator" placeholder="必填"></div>
+            <div class="form-group"><label>指定货位(可选)</label><input type="text" id="inSlot" placeholder="留空则自动分配"></div>
+            <div class="form-group full"><label>备注</label><textarea id="inNotes" placeholder="备注信息"></textarea></div>
+        </div>
+        <datalist id="dlPallet"></datalist>
+        <datalist id="dlTooling"></datalist>
+        <datalist id="dlProject"></datalist>
+        <datalist id="dlModel"></datalist>
+        <datalist id="dlCustomer"></datalist>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="handleInbound(false)">🔄 自动分配入库</button>
+            <button class="btn btn-success" onclick="handleInbound(true)">📍 指定货位入库</button>
+            <button class="btn" onclick="clearInbound()">🗑️ 清空录入</button>
+        </div>
+    </div></div>
+
+    <div class="card"><div class="card-accent"></div><div class="card-header">最近入库记录</div>
+    <div class="card-body"><div class="table-wrap"><table class="data-table"><thead><tr><th>时间</th><th>托盘号</th><th>操作人员</th><th>货位</th><th>说明</th></tr></thead><tbody id="inboundRecentBody"></tbody></table></div></div></div>
+</div>
+
+<!-- ==================== 人工出库 ==================== -->
+<div class="tab-content" id="tab-outbound">
+    <div class="card"><div class="card-accent"></div><div class="card-header">出库指令下达</div>
+    <div class="card-body">
+        <div class="form-grid" style="grid-template-columns:1fr">
+            <div class="form-group"><label>目标工件(托盘号)</label><select id="outRecord" style="padding:8px;font-size:14px"></select></div>
+            <div class="form-group"><label>操作人员</label><input type="text" id="outOperator" placeholder="必填"></div>
+            <div class="form-group"><label>指定货位(可选)</label><input type="text" id="outSlot" placeholder="留空则自动匹配"></div>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-danger" onclick="handleOutbound()">📤 执行出库</button>
+            <button class="btn" onclick="loadOutboundOptions()">🔄 刷新可选工件</button>
+        </div>
+    </div></div>
+
+    <div class="card"><div class="card-accent"></div><div class="card-header">出库台账</div>
+    <div class="card-body"><div class="table-wrap"><table class="data-table"><thead><tr><th>时间</th><th>托盘号</th><th>操作人员</th><th>说明</th></tr></thead><tbody id="outboundBody"></tbody></table></div></div></div>
+</div>
+
+<!-- ==================== 货位管理 ==================== -->
+<div class="tab-content" id="tab-slots">
+    <div class="card"><div class="card-accent"></div><div class="card-header">货位可视化</div>
+    <div class="card-body">
+        <div class="legend">
+            <div class="legend-item"><div class="legend-swatch" style="background:#e0f3e5"></div>空闲</div>
+            <div class="legend-item"><div class="legend-swatch" style="background:#ffe4e4"></div>占用</div>
+        </div>
+        <div class="slot-visual" id="slotMgmtSlots"></div>
+    </div></div>
+
+    <div class="card"><div class="card-accent"></div><div class="card-header">货位列表</div>
+    <div class="card-body">
+        <div class="table-wrap" style="max-height:250px"><table class="data-table"><thead><tr><th>货位号</th><th>状态</th><th>位置</th><th>工件ID</th></tr></thead><tbody id="slotTableBody"></tbody></table></div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="showNextAvailable()">🔍 推荐空闲货位</button>
+            <button class="btn btn-danger" onclick="releaseSelectedSlot()">🔓 释放选中货位</button>
+        </div>
+    </div></div>
+
+    <div class="card"><div class="card-accent"></div><div class="card-header">在库工件明细</div>
+    <div class="card-body"><div class="table-wrap" style="max-height:200px"><table class="data-table"><thead><tr><th>托盘号</th><th>型号</th><th>货位</th><th>入库时间</th></tr></thead><tbody id="slotInventoryBody"></tbody></table></div></div></div>
+</div>
+
+<!-- ==================== 台账查询 ==================== -->
+<div class="tab-content" id="tab-ledger">
+    <div class="card"><div class="card-accent"></div><div class="card-header">查询条件</div>
+    <div class="card-body">
+        <div class="search-bar">
+            <div class="form-group"><label>操作类型</label><select id="ledgerType"><option value="">全部类型</option><option value="0">入库</option><option value="1">出库</option></select></div>
+            <div class="form-group"><label>托盘号</label><input type="text" id="ledgerPallet"></div>
+            <div class="form-group"><label>工单号</label><input type="text" id="ledgerWorkOrder"></div>
+            <div class="form-group"><label>操作人员</label><input type="text" id="ledgerOperator"></div>
+            <div class="form-group"><label>开始时间</label><input type="datetime-local" id="ledgerStart"></div>
+            <div class="form-group"><label>结束时间</label><input type="datetime-local" id="ledgerEnd"></div>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="queryLedger()">🔍 执行查询</button>
+            <button class="btn" onclick="resetLedger()">🔄 重置条件</button>
+        </div>
+    </div></div>
+
+    <div class="card"><div class="card-accent"></div><div class="card-header">进出台账</div>
+    <div class="card-body"><div class="table-wrap" style="max-height:500px"><table class="data-table"><thead><tr><th>时间</th><th>类型</th><th>托盘号</th><th>工单号</th><th>操作人员</th><th>货位</th><th>说明</th></tr></thead><tbody id="ledgerBody"></tbody></table></div></div></div>
+</div>
+
+<!-- ==================== 报表与预警 ==================== -->
+<div class="tab-content" id="tab-report">
+    <div class="card"><div class="card-accent"></div><div class="card-header">报表导出</div>
+    <div class="card-body">
+        <div class="form-grid">
+            <div class="form-group"><label>报表类型</label><select id="reportType"><option>进出台账</option><option>库存清单</option><option>操作记录</option></select></div>
+            <div class="form-group"></div>
+            <div class="form-group"><label>库存下限</label><input type="number" id="alertMin" min="0" max="999" value="2"></div>
+            <div class="form-group"><label>库存上限</label><input type="number" id="alertMax" min="0" max="999" value="18"></div>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="exportCSV()">📥 导出 CSV</button>
+            <button class="btn" onclick="previewReport()">👁️ 报表预览</button>
+            <button class="btn btn-success" onclick="saveAlertSettings()">💾 保存预警阈值</button>
+        </div>
+    </div></div>
+
+    <div class="card"><div class="card-accent"></div><div class="card-header">报表预览</div>
+    <div class="card-body"><pre id="reportPreview" style="background:white;padding:12px;font-size:12px;max-height:400px;overflow:auto;border:1px solid var(--card-border);white-space:pre-wrap;font-family:Consolas,monospace;"></pre></div></div>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
