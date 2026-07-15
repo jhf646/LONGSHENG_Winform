@@ -335,8 +335,10 @@ async function exportCSV() {
 async function saveAlertSettings() {
     const min = parseInt(document.getElementById('alertMin').value)||2, max = parseInt(document.getElementById('alertMax').value)||18;
     if (min > max) { toast('下限不能大于上限', 'error'); return; }
-    try { await api('/appstate/alerts', { method:'POST', body:JSON.stringify({minThreshold:min, maxThreshold:max}) }); toast('✅ 已保存', 'success'); loadAlertPage(); }
+    try { await api('/appstate/alerts', { method:'POST', body:JSON.stringify({minThreshold:min, maxThreshold:max}) }); toast('✅ 已保存', 'success'); }
     catch(e) { toast('保存失败', 'error'); }
+    // 如果在预警页面则刷新状态
+    if (document.getElementById('page-alert').classList.contains('active')) loadAlertPage();
 }
 
 // ===== 预警页面 =====

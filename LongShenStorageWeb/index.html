@@ -170,13 +170,10 @@
           <div class="form-grid">
             <div class="form-group"><label>报表类型</label><select id="reportType"><option>进出台账</option><option>库存清单</option><option>操作记录</option></select></div>
             <div class="form-group"></div>
-            <div class="form-group"><label>库存下限</label><input type="number" id="alertMin" min="0" max="999" value="2"></div>
-            <div class="form-group"><label>库存上限</label><input type="number" id="alertMax" min="0" max="999" value="18"></div>
           </div>
           <div class="btn-group">
             <button class="btn btn-primary" onclick="exportCSV()">📥 导出CSV</button>
             <button class="btn" onclick="previewReport()">👁️ 预览</button>
-            <button class="btn btn-success perm-write" onclick="saveAlertSettings()">💾 保存预警</button>
           </div>
         </div>
       </div>
