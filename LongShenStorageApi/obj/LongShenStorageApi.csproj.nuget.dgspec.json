@@ -65,6 +65,10 @@
               "target": "Package",
               "version": "[7.0.2, )"
             },
+            "NModbus": {
+              "target": "Package",
+              "version": "[3.0.83, )"
+            },
             "Swashbuckle.AspNetCore": {
               "target": "Package",
               "version": "[10.2.3, )"

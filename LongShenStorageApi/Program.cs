@@ -1,4 +1,5 @@
 using LongShenStorageApi.Data;
+using LongShenStorageApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -37,12 +38,30 @@ builder.Services.AddSwaggerGen();
 // 注册数据仓库
 builder.Services.AddSingleton<SqlServerRepository>();
 
-// CORS
+// 注册Modbus设备（模拟器/真实PLC根据配置切换）
+var useSimulator = builder.Configuration.GetValue<bool>("ModbusTcp:UseSimulator");
+if (useSimulator)
+{
+    builder.Services.AddSingleton<ModbusSimulator>();
+    builder.Services.AddSingleton<IModbusDevice>(sp => sp.GetRequiredService<ModbusSimulator>());
+}
+else
+{
+    builder.Services.AddSingleton<IModbusDevice, ModbusTcpClientService>();
+}
+builder.Services.AddHostedService<ModbusSimulatorHostedService>();
+// 注册寄存器配置服务
+builder.Services.AddSingleton<RegisterConfigService>();
+
+// CORS - 允许所有来源（支持前端跨域访问）
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader();
+        policy.SetIsOriginAllowed(_ => true)
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 

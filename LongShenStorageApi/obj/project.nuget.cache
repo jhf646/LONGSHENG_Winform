@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "0Xr09dGzqlE=",
+  "dgSpecHash": "rThLYiJimxU=",
   "success": true,
   "projectFilePath": "C:\\Users\\jiaohengfei\\Desktop\\上海隆深\\上海隆深软件\\隆深软件程序\\LongShenStorageApi\\LongShenStorageApi.csproj",
   "expectedPackageFiles": [
@@ -20,6 +20,7 @@
     "C:\\Users\\jiaohengfei\\.nuget\\packages\\microsoft.identitymodel.tokens\\8.16.0\\microsoft.identitymodel.tokens.8.16.0.nupkg.sha512",
     "C:\\Users\\jiaohengfei\\.nuget\\packages\\microsoft.openapi\\2.7.5\\microsoft.openapi.2.7.5.nupkg.sha512",
     "C:\\Users\\jiaohengfei\\.nuget\\packages\\microsoft.sqlserver.server\\1.0.0\\microsoft.sqlserver.server.1.0.0.nupkg.sha512",
+    "C:\\Users\\jiaohengfei\\.nuget\\packages\\nmodbus\\3.0.83\\nmodbus.3.0.83.nupkg.sha512",
     "C:\\Users\\jiaohengfei\\.nuget\\packages\\swashbuckle.aspnetcore\\10.2.3\\swashbuckle.aspnetcore.10.2.3.nupkg.sha512",
     "C:\\Users\\jiaohengfei\\.nuget\\packages\\swashbuckle.aspnetcore.swagger\\10.2.3\\swashbuckle.aspnetcore.swagger.10.2.3.nupkg.sha512",
     "C:\\Users\\jiaohengfei\\.nuget\\packages\\swashbuckle.aspnetcore.swaggergen\\10.2.3\\swashbuckle.aspnetcore.swaggergen.10.2.3.nupkg.sha512",

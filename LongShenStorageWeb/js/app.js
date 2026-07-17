@@ -63,7 +63,7 @@ function applyPagePermissions() {
 function switchPage(pageId) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === pageId));
     document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === `page-${pageId}`));
-    const titles = { dashboard: '仪表盘', inbound: '入库管理', outbound: '出库管理', slots: '货位管理', ledger: '台账查询', report: '报表统计', users: '用户管理', alert: '库存预警', roles: '角色权限' };
+    const titles = { dashboard: '仪表盘', inbound: '入库管理', outbound: '出库管理', slots: '货位管理', ledger: '台账查询', report: '报表统计', users: '用户管理', alert: '库存预警', roles: '角色权限', devmonitor: '设备监控', devcontrol: '设备调用' };
     document.getElementById('pageTitle').textContent = titles[pageId] || pageId;
     if (pageId === 'dashboard') loadDashboard();
     if (pageId === 'slots') loadSlotPage();
@@ -71,6 +71,8 @@ function switchPage(pageId) {
     if (pageId === 'users') loadUserList();
     if (pageId === 'alert') loadAlertPage();
     if (pageId === 'roles') loadRolePage();
+    if (pageId === 'devmonitor') loadDeviceMonitor();
+    if (pageId === 'devcontrol') { loadDeviceRegisters(); loadDeviceMonitor(); }
 }
 
 document.getElementById('tabNav').addEventListener('click', e => {
@@ -444,6 +446,138 @@ async function deleteUser(id) {
 }
 
 function closeUserModal() { document.getElementById('userModal').classList.add('hidden'); }
+
+// ===== 设备监控 =====
+let devMonitorTimer = null;
+
+async function loadDeviceMonitor() {
+    try {
+        const data = await api('/device/monitor');
+        const st = data.status, pos = data.position, fl = data.flags, cmd = data.command;
+
+        // 状态卡片
+        const stateMap = { 1: '<span style="color:#12b76a">🟢 空闲中</span>', 2: '<span style="color:#f79009">🟡 运行中</span>', 3: '<span style="color:#d92d20">🔴 故障中</span>', 4: '<span style="color:#667085">⏸️ 暂停中</span>' };
+        document.getElementById('devState').innerHTML = stateMap[st.state] || `未知(${st.state})`;
+        document.getElementById('devMode').textContent = st.mode === 1 ? '🛠️ 手动' : st.mode === 2 ? '🤖 自动' : `-`;
+        document.getElementById('devStep').textContent = st.step > 0 ? `步骤 ${st.step}` : '-';
+        const errorEl = document.getElementById('devError');
+        errorEl.textContent = st.errorCode || '0';
+        errorEl.style.color = st.errorCode > 0 ? '#d92d20' : '#12b76a';
+
+        // 轴位置
+        document.getElementById('devPosition').innerHTML = `
+            <div style="margin-bottom:4px">X轴: <strong>${pos.x}</strong> mm</div>
+            <div style="margin-bottom:4px">Y轴: <strong>${pos.y}</strong> mm</div>
+            <div style="margin-bottom:4px">Z深库: <strong>${pos.zDeep}</strong> mm</div>
+            <div>Z浅库: <strong>${pos.zShallow}</strong> mm</div>
+        `;
+
+        // 信号状态
+        document.getElementById('devFlags').innerHTML = `
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+                <div>任务完成: <strong>${fl.taskDone ? '✅' : '❌'}</strong></div>
+                <div>转移状态: <strong>${fl.transferState}</strong></div>
+                <div>可移库: <strong>${fl.canMove === 1 ? '✅' : '❌'}</strong></div>
+                <div>左入可入库: <strong>${fl.leftIn === 1 ? '✅' : '❌'}</strong></div>
+                <div>左出可出库: <strong>${fl.leftOut === 1 ? '✅' : '❌'}</strong></div>
+                <div>右入可入库: <strong>${fl.rightIn === 1 ? '✅' : '❌'}</strong></div>
+                <div>右出可出库: <strong>${fl.rightOut === 1 ? '✅' : '❌'}</strong></div>
+                <div>A→B完成: <strong>${fl.actionDone ? '✅' : '❌'}</strong></div>
+                <div>堆垛车位置: <strong>${fl.carrierPos || '-'}</strong></div>
+            </div>
+        `;
+
+        document.getElementById('devLastUpdate').textContent = `🕐 更新于 ${new Date().toLocaleTimeString('zh-CN')}`;
+
+        // 寄存器表
+        const allRegs = [
+            {a:100,n:'立库状态',v:st.state,d:'1空闲 2运行 3故障'},
+            {a:101,n:'故障代码',v:st.errorCode,d:''},{a:102,n:'运行模式',v:st.mode,d:'1手动 2自动'},
+            {a:103,n:'动作步骤',v:st.step,d:''},{a:104,n:'任务完成',v:fl.taskDone,d:'1完成 2执行'},
+            {a:105,n:'转移状态',v:fl.transferState,d:'1未取 2已转 3到位'},
+            {a:107,n:'X轴位置',v:pos.x,d:'mm'},{a:108,n:'Y轴位置',v:pos.y,d:'mm'},
+            {a:109,n:'Z深库',v:pos.zDeep,d:'mm'},{a:110,n:'Z浅库',v:pos.zShallow,d:'mm'},
+            {a:111,n:'可移库',v:fl.canMove,d:'1可 2不可'},{a:112,n:'左入可入库',v:fl.leftIn,d:'1可 2不可'},
+            {a:113,n:'左出可出库',v:fl.leftOut,d:'1可 2不可'},{a:114,n:'右入可入库',v:fl.rightIn,d:'1可 2不可'},
+            {a:115,n:'右出可出库',v:fl.rightOut,d:'1可 2不可'},{a:116,n:'A→B完成',v:fl.actionDone,d:'0/1'},
+            {a:117,n:'堆垛车位置',v:fl.carrierPos,d:'车位号'},{a:101,n:'设备序号',v:cmd.deviceNo,d:'写入区'},
+            {a:103,n:'动作标志',v:cmd.actionFlag,d:'写入区'},{a:112,n:'动作类型',v:cmd.actionType,d:'1默认 2出库 3入库'}
+        ];
+        document.getElementById('devRegisterTable').innerHTML = allRegs.map(r =>
+            `<tr><td>D${r.a}</td><td>${r.n}</td><td style="font-weight:bold;font-size:14px">${r.v}</td><td style="color:var(--text-secondary);font-size:12px">${r.d}</td></tr>`
+        ).join('');
+
+        // 自动刷新
+        if (document.getElementById('page-devmonitor').classList.contains('active')) {
+            clearTimeout(devMonitorTimer);
+            devMonitorTimer = setTimeout(loadDeviceMonitor, 2000);
+        }
+    } catch(e) { /* 静默重试 */ if (document.getElementById('page-devmonitor').classList.contains('active')) setTimeout(loadDeviceMonitor, 3000); }
+}
+
+// ===== 设备调用 =====
+async function loadDeviceRegisters() {
+    try {
+        const defs = await api('/device/write-defs');
+        const regs = defs.registers || [];
+        const current = await api('/device/monitor');
+        const cmd = current.command || {};
+
+        document.getElementById('writeRegisters').innerHTML = regs.map(r => {
+            const val = cmd[getCmdKey(r.address)] ?? 0;
+            return `<div style="padding:8px;background:#f9fafb;border-radius:6px;border:1px solid var(--border)">
+                <div style="font-size:11px;color:var(--text-secondary)">D${r.address} ${r.name}</div>
+                <input type="number" id="reg_${r.address}" value="${val}" min="0" max="65535"
+                    style="width:100%;padding:4px 8px;margin-top:4px;border:1px solid var(--border);border-radius:4px;font-size:13px">
+                <div style="font-size:10px;color:var(--text-secondary);margin-top:2px">${r.description}</div>
+            </div>`;
+        }).join('');
+    } catch(e) { toast('加载寄存器定义失败', 'error'); }
+}
+
+function getCmdKey(addr) {
+    const map = {101:'deviceNo',102:'seqNo',103:'actionFlag',104:'aRow',105:'aCol',106:'aLevel',107:'bRow',108:'bCol',109:'bLevel',110:'param1',111:'param2',112:'actionType'};
+    return map[addr] || '';
+}
+
+async function sendDeviceCommand() {
+    const cmd = {
+        deviceNo: parseInt(document.getElementById('cmdDeviceNo').value) || 1,
+        fromRow: parseInt(document.getElementById('cmdFromRow').value) || 1,
+        fromCol: parseInt(document.getElementById('cmdFromCol').value) || 1,
+        fromLevel: parseInt(document.getElementById('cmdFromLevel').value) || 1,
+        toRow: parseInt(document.getElementById('cmdToRow').value) || 1,
+        toCol: parseInt(document.getElementById('cmdToCol').value) || 1,
+        toLevel: parseInt(document.getElementById('cmdToLevel').value) || 1,
+        actionType: parseInt(document.getElementById('cmdActionType').value) || 1
+    };
+
+    try {
+        const result = await api('/device/command', { method: 'POST', body: JSON.stringify(cmd) });
+        const el = document.getElementById('cmdResult');
+        el.style.display = 'block';
+        el.innerHTML = `<div style="color:var(--success);font-weight:bold">✅ ${result.message}</div>`;
+        // 自动刷新监控
+        if (document.getElementById('page-devcontrol').classList.contains('active')) {
+            setTimeout(() => { loadDeviceMonitor(); loadDeviceRegisters(); }, 500);
+        }
+    } catch(e) {
+        const el = document.getElementById('cmdResult');
+        el.style.display = 'block';
+        el.innerHTML = `<div style="color:var(--danger)">❌ 指令发送失败: ${e.message}</div>`;
+    }
+}
+
+async function writeSingleRegister() {
+    const addr = parseInt(document.getElementById('singleAddr').value);
+    const val = parseInt(document.getElementById('singleValue').value);
+    if (isNaN(addr) || isNaN(val)) { toast('请输入地址和值', 'error'); return; }
+    try {
+        await api('/device/write', { method: 'POST', body: JSON.stringify({ address: addr, value: val }) });
+        toast(`✅ D${addr} = ${val} 已写入`, 'success');
+        loadDeviceRegisters(); loadDeviceMonitor();
+    } catch(e) { toast('❌ ' + e.message, 'error'); }
+}
 
 // ===== 角色权限管理 =====
 let rolePermissionCache = {};

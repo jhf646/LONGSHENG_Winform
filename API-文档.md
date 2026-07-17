@@ -271,6 +271,25 @@ dotnet run
 # 启动后访问 http://localhost:5000 自动跳转 Swagger 文档
 ```
 
+### 寄存器配置（可编辑）
+所有 Modbus 寄存器的地址映射、名称、说明均定义在 `LongShenStorageApi/registers.json` 中。
+**直接编辑此文件**即可修改协议映射，保存后重启 API 生效。
+或通过 API 在线修改：`GET/POST /api/device/config`
+
+**registers.json 格式：**
+```json
+{
+  "deviceName": "设备名称",
+  "protocol": "协议类型",
+  "readRegisters": [
+    { "address": 100, "name": "寄存器名", "description": "说明", "unit": "单位" }
+  ],
+  "writeRegisters": [
+    { "address": 101, "name": "写入寄存器", "description": "说明", "unit": "" }
+  ]
+}
+```
+
 ### Web 前端
 直接浏览器打开 `LongShenStorageWeb/index.html`，确保 API 已启动。
 

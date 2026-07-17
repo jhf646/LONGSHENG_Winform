@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "Zj/vXMM6eQw=",
+  "dgSpecHash": "Brp8UCjk24M=",
   "success": true,
-  "projectFilePath": "c:\\Users\\jiaohengfei\\Desktop\\上海隆深\\上海隆深软件\\隆深软件程序\\LongShenStorageSystem\\LongShenStorageSystem.csproj",
+  "projectFilePath": "C:\\Users\\jiaohengfei\\Desktop\\上海隆深\\上海隆深软件\\隆深软件程序\\LongShenStorageSystem\\LongShenStorageSystem.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\jiaohengfei\\.nuget\\packages\\microsoft.bcl.cryptography\\9.0.13\\microsoft.bcl.cryptography.9.0.13.nupkg.sha512",
     "C:\\Users\\jiaohengfei\\.nuget\\packages\\microsoft.data.sqlclient\\7.0.2\\microsoft.data.sqlclient.7.0.2.nupkg.sha512",
