@@ -1,4 +1,4 @@
-/* ===== 隆深库存管理系统 - 专业管理界面 v3 ===== */
+/* ===== 氢晨库存管理系统 - 专业管理界面 v3 ===== */
 :root {
     --sidebar-w: 220px;
     --header-h: 56px;
@@ -34,16 +34,16 @@ body {
     display: flex; flex-direction: column; position: fixed; left: 0; top: 0; z-index: 100;
 }
 .sidebar-logo {
-    padding: 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
-    display: flex; align-items: center; gap: 12px;
+    padding: 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; gap: 10px;
 }
 .sidebar-logo .logo-icon {
-    width: 40px; height: 40px; background: var(--accent); border-radius: 8px;
+    width: 36px; height: 36px; background: var(--accent); border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 20px; font-weight: bold; color: white; flex-shrink: 0;
+    font-size: 20px; flex-shrink: 0;
 }
 .sidebar-logo .logo-text { color: white; font-size: 15px; font-weight: bold; line-height: 1.3; }
-.sidebar-logo .logo-text small { font-size: 11px; font-weight: normal; color: var(--sidebar-text); display: block; }
+.sidebar-logo .logo-text small { font-size: 10px; font-weight: normal; color: var(--sidebar-text); display: block; margin-top: 1px; }
 
 .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
 .nav-item {
@@ -82,7 +82,11 @@ body {
     padding: 0 24px; position: sticky; top: 0; z-index: 50;
 }
 .topbar-title { font-size: 16px; font-weight: bold; color: var(--text); }
-.topbar-status { font-size: 12px; color: var(--text-secondary); }
+.topbar-right { display: flex; align-items: center; gap: 0; }
+.topbar-clock { font-size: 13px; color: var(--text-secondary); font-weight: 500; letter-spacing: 0.5px; }
+.topbar-divider { color: #d0d5dd; font-size: 14px; margin: 0 12px; }
+.topbar-status { font-size: 12px; color: var(--text-secondary); margin-right: 14px; }
+.topbar-logo { height: 28px; width: auto; border-radius: 4px; }
 .content { padding: 20px 24px; }
 
 /* ===== 页面 ===== */
@@ -148,6 +152,95 @@ body {
     border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,74,122,0.1);
 }
 .form-group textarea { min-height: 60px; resize: vertical; }
+
+/* ===== 登录页 ===== */
+.login-page {
+    position: fixed; inset: 0; z-index: 9999;
+    background: #f5f7fa;
+    display: flex; align-items: center; justify-content: center;
+}
+.login-container {
+    display: flex; align-items: center; gap: 0;
+    background: white; border-radius: 20px;
+    box-shadow: 0 4px 40px rgba(0,0,0,0.08);
+    overflow: hidden; max-width: 900px; width: 100%;
+    margin: 20px;
+}
+
+/* 左侧品牌区 */
+.login-left {
+    flex: 1; padding: 60px 48px;
+    background: linear-gradient(160deg, #0d2e4e 0%, #1a4a7a 100%);
+    color: white; min-height: 500px;
+    display: flex; flex-direction: column; justify-content: center;
+}
+.login-logo-area {
+    width: 100px; height: 100px; margin-bottom: 28px;
+    background: white; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    padding: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+.login-logo-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.login-left-title { font-size: 26px; font-weight: bold; letter-spacing: 2px; margin-bottom: 6px; }
+.login-left-sub { font-size: 13px; color: rgba(255,255,255,0.5); letter-spacing: 1px; margin-bottom: 20px; }
+.login-left-desc { font-size: 14px; color: rgba(255,255,255,0.65); line-height: 1.7; max-width: 320px; }
+
+/* 右侧登录区 */
+.login-right {
+    width: 420px; padding: 40px 44px;
+    position: relative;
+}
+.login-right-top {
+    position: absolute; top: 24px; right: 28px;
+    font-size: 12px; color: #98a2b3;
+}
+.login-right-top a { color: #1a4a7a; text-decoration: none; font-weight: 600; }
+.login-card-title { font-size: 24px; font-weight: bold; color: #1d2939; margin-bottom: 4px; }
+.login-card-sub { font-size: 14px; color: #98a2b3; margin-bottom: 32px; }
+
+.login-input-wrap { margin-bottom: 20px; }
+.login-input-label {
+    font-size: 13px; font-weight: 600; color: #344054;
+    margin-bottom: 6px;
+}
+.login-input-wrap input {
+    width: 100%; padding: 11px 14px; font-size: 14px;
+    border: 1.5px solid #e0e4e8; border-radius: 8px;
+    outline: none; font-family: inherit; background: #fafbfc;
+    transition: all 0.2s; box-sizing: border-box;
+}
+.login-input-wrap input:focus {
+    border-color: #1a4a7a; background: white;
+    box-shadow: 0 0 0 3px rgba(26,74,122,0.08);
+}
+
+.login-action-btn {
+    width: 100%; padding: 12px; margin-top: 8px;
+    background: #1a4a7a; color: white; border: none;
+    border-radius: 8px; font-size: 15px; font-weight: bold;
+    cursor: pointer; font-family: inherit;
+    transition: all 0.2s;
+}
+.login-action-btn:hover { background: #0d2e4e; }
+.login-action-btn:active { transform: scale(0.98); }
+
+.login-demo-accounts {
+    margin-top: 20px; padding: 12px 14px;
+    background: #f8f9fc; border-radius: 8px;
+    font-size: 12px; color: #98a2b3; line-height: 1.8;
+}
+.login-demo-accounts code {
+    background: #e8ecf0; padding: 1px 6px; border-radius: 3px;
+    font-size: 11px; color: #1a4a7a; font-weight: 600;
+}
+
+@media (max-width: 780px) {
+    .login-container { flex-direction: column; max-width: 440px; }
+    .login-left { padding: 40px 32px; min-height: auto; align-items: center; text-align: center; }
+    .login-left-desc { max-width: 100%; }
+    .login-right { width: 100%; padding: 32px 28px; }
+    .login-right-top { position: static; text-align: right; margin-bottom: 16px; }
+}
 
 /* ===== 按钮 ===== */
 .btn {

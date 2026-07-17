@@ -1,6 +1,6 @@
 ﻿<#============================================================================
-  上海隆深库存管理系统 - 一键部署脚本
-  功能：SQL数据库初始化 + 后端API服务部署 + Web前端IIS发布
+  上海氢晨库存管理系统 - 一键部署脚本
+  功能：SQL数据库初始化 + 后端API服务部署 + Web前端发布
   用法：以管理员身份运行 PowerShell，执行本脚本
 ============================================================================#>
 
@@ -222,41 +222,43 @@ if (-not $SkipApi) {
     $apiConfig | ConvertTo-Json -Depth 10 | Set-Content "$apiPublishPath\appsettings.json"
     Write-Info "Connection string updated"
 
-    # 注册 Windows 服务
-    Write-Step "4/5 - Register Windows Service"
+    # 注册开机自启任务（替代 Windows 服务，更稳定）
+    Write-Step "4/5 - Register auto-start task"
 
-    $svc = Get-Service "LongShenStorageApi" -ErrorAction SilentlyContinue
-    if ($svc) {
-        Write-Info "Stopping old service..."
-        Stop-Service "LongShenStorageApi" -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 2
-        & sc.exe delete "LongShenStorageApi" 2>$null
-        Start-Sleep -Seconds 1
-    }
+    # 停止旧进程
+    Get-Process -Name "dotnet" -ErrorAction SilentlyContinue | Where-Object { $_.CommandLine -match "LongShenStorage" } | Stop-Process -Force 2>$null
+    Start-Sleep -Seconds 1
+
+    # 删除旧任务和服务
+    schtasks /delete /tn "LongShenStorageApi" /f 2>$null
+    & sc.exe delete "LongShenStorageApi" 2>$null
 
     $exePath = "$apiPublishPath\LongShenStorageApi.dll"
     if (Test-Path $exePath) {
         try {
-            # 使用 dotnet + dll 方式注册服务
             $dotnetPath = (Get-Command dotnet).Source
-            $binPath = "`"$dotnetPath`" `"$exePath`" --urls http://0.0.0.0:$ApiPort --contentRoot `"$apiPublishPath`""
-            # 用 PowerShell New-Service 替代 sc.exe（避免参数解析问题）
-            $svc = Get-Service "LongShenStorageApi" -ErrorAction SilentlyContinue
-            if ($svc) { & sc.exe delete "LongShenStorageApi" 2>$null; Start-Sleep 2 }
-            New-Service -Name "LongShenStorageApi" -BinaryPathName $binPath -StartupType Automatic -DisplayName "LongShenStorageApi" -Description "Shanghai LongShen WMS API" -ErrorAction Stop
-            Start-Sleep -Seconds 2
-            Start-Service "LongShenStorageApi"
+            $taskCmd = "dotnet `"$exePath`" --urls http://0.0.0.0:$ApiPort"
+            schtasks /create /tn "LongShenStorageApi" /tr "$taskCmd" /sc onstart /ru SYSTEM /f
+            Write-Success "Auto-start task [LongShenStorageApi] created"
+
+            # 立即启动
+            Write-Info "Starting API now..."
+            schtasks /run /tn "LongShenStorageApi"
             Start-Sleep -Seconds 5
-            $svcStatus = (Get-Service "LongShenStorageApi").Status
-            if ($svcStatus -eq 'Running') {
-                Write-Success "Service [LongShenStorageApi] created & started"
-                Write-Info "  API: http://localhost:$ApiPort"
+
+            # 验证是否启动成功
+            $portCheck = netstat -ano | findstr ":${ApiPort} "
+            if ($portCheck) {
+                Write-Success "API is running on http://localhost:$ApiPort"
             } else {
-                throw "Service status: $svcStatus"
+                # 备用：直接启动
+                Write-Warn "Task started but port $ApiPort not yet listening, starting directly..."
+                $p = Start-Process -FilePath "dotnet" -ArgumentList "`"$exePath`" --urls http://0.0.0.0:$ApiPort" -WindowStyle Hidden -PassThru
+                Write-Info "API PID: $($p.Id)"
             }
         } catch {
-            Write-Warn "Service failed to start: $_"
-            Write-Info "Starting API directly instead..."
+            Write-Warn "Task create failed: $_"
+            Write-Info "Starting API directly..."
             $p = Start-Process -FilePath "dotnet" -ArgumentList "`"$exePath`" --urls http://0.0.0.0:$ApiPort" -WindowStyle Hidden -PassThru
             Write-Info "API PID: $($p.Id)"
         }

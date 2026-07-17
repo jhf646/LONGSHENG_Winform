@@ -11,7 +11,7 @@ JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 var builder = WebApplication.CreateBuilder(args);
 
 // JWT 认证
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "LongShenStorageSystemSecretKey2026!@#$%";
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "HydrogenStarWmsSecretKey2026!@#$%";
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

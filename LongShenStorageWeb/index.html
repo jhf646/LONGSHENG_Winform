@@ -3,20 +3,45 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>上海隆深库存管理系统</title>
+<title>上海氢晨库存管理系统</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-<!-- 登录弹窗 -->
-<div class="modal-overlay" id="loginOverlay">
-  <div class="modal-box" style="max-width:400px">
-    <div class="modal-header" style="background:#0d2e4e;color:white;justify-content:center;border-radius:10px 10px 0 0;font-size:18px">🔐 隆深库存管理系统</div>
-    <div class="modal-body">
-      <div class="form-group" style="margin-bottom:16px"><label>用户名</label><input type="text" id="loginUser" placeholder="admin / operator / viewer"></div>
-      <div class="form-group" style="margin-bottom:20px"><label>密码</label><input type="password" id="loginPass" placeholder="输入密码"></div>
-      <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;font-size:15px" onclick="handleLogin()">登 录</button>
-      <div style="margin-top:12px;font-size:12px;color:#999;text-align:center">默认: admin/admin123 · operator/123456 · viewer/123456</div>
+<!-- ===== 登录页面（独立全屏） ===== -->
+<div class="login-page" id="loginPage">
+  <div class="login-container">
+    <div class="login-left">
+      <div class="login-logo-area">
+        <img src="logo.jpg" alt="氢晨" class="login-logo-img">
+      </div>
+      <div class="login-left-title">氢晨库存管理系统</div>
+      <div class="login-left-sub">Hydrogen Star WMS</div>
+      <div class="login-left-desc">智能仓储管理平台，支持入库出库管理、货位可视化、设备监控、数据报表等全流程管理功能。</div>
+    </div>
+    <div class="login-right">
+      <div class="login-right-top">
+        <span>还没有账号？</span>
+        <a href="javascript:void(0)">联系管理员</a>
+      </div>
+      <div class="login-card">
+        <div class="login-card-title">欢迎回来</div>
+        <div class="login-card-sub">请登录您的账号</div>
+        <div class="login-input-wrap">
+          <div class="login-input-label">用户名</div>
+          <input type="text" id="loginUser" placeholder="请输入用户名" autofocus>
+        </div>
+        <div class="login-input-wrap">
+          <div class="login-input-label">密码</div>
+          <input type="password" id="loginPass" placeholder="请输入密码" onkeydown="if(event.key==='Enter')handleLogin()">
+        </div>
+        <button class="login-action-btn" onclick="handleLogin()">登 录</button>
+        <div class="login-demo-accounts">
+          <span>演示账号：</span>
+          <code>admin</code> / admin123
+          <code>operator</code> / 123456
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -24,8 +49,8 @@
 <!-- 侧边栏 -->
 <div class="sidebar">
   <div class="sidebar-logo">
-    <div class="logo-icon">LS</div>
-    <div class="logo-text">隆深库存管理<small>LongShen WMS</small></div>
+    <div class="logo-icon" style="background:transparent;width:auto;height:auto;font-size:22px">🏭</div>
+    <div class="logo-text">氢晨科技<small>库存管理系统</small></div>
   </div>
   <nav class="sidebar-nav" id="tabNav">
     <a class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span>仪表盘</a>
@@ -53,7 +78,12 @@
 <div class="main">
   <div class="topbar">
     <div class="topbar-title" id="pageTitle">仪表盘</div>
-    <div class="topbar-status" id="topbarStatus"><span id="headerStatus">加载中...</span></div>
+    <div class="topbar-right">
+      <span class="topbar-clock" id="topbarClock"></span>
+      <span class="topbar-divider">|</span>
+      <span class="topbar-status" id="headerStatus">加载中...</span>
+      <img src="logo.jpg" alt="氢晨" class="topbar-logo">
+    </div>
   </div>
   <div class="content">
 

@@ -27,6 +27,7 @@ public class AuthController : ControllerBase
 
     /// <summary>用户登录</summary>
     [HttpPost("login")]
+    [AllowAnonymous]
     public ActionResult<LoginResponse> Login([FromBody] LoginRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
@@ -151,7 +152,7 @@ public class AuthController : ControllerBase
     private string GenerateToken(User user)
     {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-            _config["Jwt:Key"] ?? "LongShenStorageSystemSecretKey2026!@#$%"));
+            _config["Jwt:Key"] ?? "HydrogenStarWmsSecretKey2026!@#$%"));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new List<Claim>

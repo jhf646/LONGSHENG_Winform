@@ -1,4 +1,4 @@
-// ===== 隆深库存管理系统 Web v3 =====
+// ===== 氢晨库存管理系统 Web v3 =====
 const API_BASE = 'http://localhost:5000/api';
 let authToken = localStorage.getItem('ls_token') || '';
 let currentUser = JSON.parse(localStorage.getItem('ls_user') || 'null');
@@ -20,8 +20,16 @@ function formatTime(d) { return new Date(d).toLocaleString('zh-CN', { hour12: fa
 function hasRole(...roles) { return currentUser && roles.includes(currentUser.role); }
 
 // ===== 登录/登出 =====
-function showLogin() { document.getElementById('loginOverlay').classList.remove('hidden'); }
-function hideLogin() { document.getElementById('loginOverlay').classList.add('hidden'); }
+function showLogin() {
+    document.getElementById('loginPage').style.display = 'flex';
+    document.querySelector('.sidebar').style.display = 'none';
+    document.querySelector('.main').style.display = 'none';
+}
+function hideLogin() {
+    document.getElementById('loginPage').style.display = 'none';
+    document.querySelector('.sidebar').style.display = 'flex';
+    document.querySelector('.main').style.display = 'block';
+}
 function logout() {
     authToken = ''; currentUser = null;
     localStorage.removeItem('ls_token'); localStorage.removeItem('ls_user');
@@ -81,6 +89,10 @@ document.getElementById('tabNav').addEventListener('click', e => {
 });
 
 // ===== 初始化 =====
+function updateClock() {
+    const now = new Date();
+    document.getElementById('topbarClock').textContent = now.toLocaleString('zh-CN', { hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
 async function initApp() {
     await Promise.all([loadDashboard(), loadDropdowns()]);
     loadOutboundOptions();
@@ -91,10 +103,14 @@ async function initApp() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') handleLogin(); });
     if (authToken && currentUser) {
         hideLogin(); updateUserUI(); applyPagePermissions(); initApp();
+    } else {
+        showLogin();
     }
+    // 启动时钟
+    updateClock();
+    setInterval(updateClock, 1000);
 });
 
 // ===== 下拉选项 =====
