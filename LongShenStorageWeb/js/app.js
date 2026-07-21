@@ -267,20 +267,47 @@ async function loadOutboundRecent() {
 let selectedSlotCode = null;
 function handleSlotClick(slot) {
     selectedSlotCode = slot.slotCode;
-    if (slot.isOccupied) { showSlotDetail(slot); }
-    else {
-        document.getElementById('inSlot').value = slot.slotCode;
-        switchPage('inbound');
-        document.getElementById('inPallet').focus();
-        toast(`已选空闲货位 ${slot.slotCode}`, 'success');
-    }
+    showSlotDetail(slot);
 }
 async function showSlotDetail(slot) {
     try {
         const items = await api('/workpiecerecords');
         const wp = items.find(i => i.id === slot.workpieceId);
-        alert(`📦 库位: ${slot.slotCode}\n📍 ${slot.rowNumber}排/${slot.columnNumber}列/${slot.levelNumber}层\n📌 ${slot.isOccupied ? '占用' : '空闲'}\n🏷️ 托盘: ${wp?.palletNumber || '-'}\n🔧 工装: ${wp?.toolingNumber || '-'}\n📋 项目: ${wp?.projectNumber || '-'}\n🔤 型号: ${wp?.modelType || '-'}\n📄 工单: ${wp?.workOrder || '-'}\n⚡ 电解槽: ${wp?.cellNumber || '-'}\n🔢 节数: ${wp?.componentSections || '-'}\n🏢 客户: ${wp?.customerName || '-'}\n⏱️ 入库: ${wp ? formatTime(wp.inboundTime) : '-'}\n👤 操作: ${wp?.lastOperator || '-'}\n📝 备注: ${wp?.notes || '-'}`);
-    } catch(e) {}
+        const isFree = !slot.isOccupied;
+        document.getElementById('slotDetailBody').innerHTML = `
+            <div style="text-align:center;margin-bottom:20px">
+                <div style="font-size:40px;margin-bottom:8px">${isFree ? '🟢' : '🔴'}</div>
+                <div style="font-size:18px;font-weight:bold;color:#1d2939">${slot.slotCode}</div>
+                <div style="font-size:13px;color:#98a2b3;margin-top:2px">${slot.zone} · ${slot.rowNumber}排${slot.columnNumber}列${slot.levelNumber}层</div>
+            </div>
+            <div style="border-top:1px solid #e8ecf0;padding-top:16px">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:13px">
+                    ${wp ? `
+                    <div><span style="color:#98a2b3">托盘号</span><br><span style="font-weight:600">${wp.palletNumber || '-'}</span></div>
+                    <div><span style="color:#98a2b3">工装号</span><br><span style="font-weight:600">${wp.toolingNumber || '-'}</span></div>
+                    <div><span style="color:#98a2b3">项目号</span><br><span style="font-weight:600">${wp.projectNumber || '-'}</span></div>
+                    <div><span style="color:#98a2b3">型号</span><br><span style="font-weight:600">${wp.modelType || '-'}</span></div>
+                    <div><span style="color:#98a2b3">工单号</span><br><span style="font-weight:600">${wp.workOrder || '-'}</span></div>
+                    <div><span style="color:#98a2b3">电解槽编号</span><br><span style="font-weight:600">${wp.cellNumber || '-'}</span></div>
+                    <div><span style="color:#98a2b3">组件节数</span><br><span style="font-weight:600">${wp.componentSections || '-'}</span></div>
+                    <div><span style="color:#98a2b3">客户名称</span><br><span style="font-weight:600">${wp.customerName || '-'}</span></div>
+                    <div style="grid-column:1/-1"><span style="color:#98a2b3">操作人员</span><br><span style="font-weight:600">${wp.lastOperator || '-'}</span></div>
+                    <div style="grid-column:1/-1"><span style="color:#98a2b3">入库时间</span><br><span style="font-weight:600">${formatTime(wp.inboundTime)}</span></div>
+                    <div style="grid-column:1/-1;margin-bottom:8px"><span style="color:#98a2b3">备注</span><br><span style="font-weight:600">${wp.notes || '-'}</span></div>
+                    ` : '<div style="grid-column:1/-1;text-align:center;color:#12b76a;padding:16px 0;font-size:15px">✅ 该库位空闲</div>'}
+                </div>
+            </div>
+            <div style="border-top:1px solid #e8ecf0;padding-top:14px;margin-top:4px;text-align:center">
+                <button class="btn" onclick="closeSlotDetail()">关闭</button>
+            </div>
+        `;
+        document.getElementById('slotDetailModal').classList.remove('hidden');
+    } catch(e) {
+        toast('加载失败: ' + e.message, 'error');
+    }
+}
+function closeSlotDetail() {
+    document.getElementById('slotDetailModal').classList.add('hidden');
 }
 async function loadSlotPage() {
     try {
