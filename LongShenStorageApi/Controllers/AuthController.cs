@@ -114,6 +114,11 @@ public class AuthController : ControllerBase
         var user = _repo.GetUserById(id);
         if (user is null) return NotFound(new { error = "用户不存在" });
 
+        // 防止管理员停用自己的账号
+        var currentUserIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (Guid.TryParse(currentUserIdClaim, out var currentUserId) && currentUserId == id && !request.IsActive)
+            return BadRequest(new { error = "不能停用自己的账号" });
+
         user.DisplayName = request.DisplayName ?? user.DisplayName;
         user.Role = request.Role;
         user.IsActive = request.IsActive;

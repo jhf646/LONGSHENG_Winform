@@ -54,7 +54,7 @@ async function handleLogin() {
 }
 
 function updateUserUI() {
-    document.getElementById('sidebarAvatar').textContent = currentUser.displayName.charAt(0);
+    document.getElementById('sidebarAvatar').innerHTML = '👤';
     document.getElementById('sidebarUserName').textContent = currentUser.displayName;
     const roleMap = { Admin: '管理员', Operator: '操作员', Viewer: '查看员' };
     document.getElementById('sidebarUserRole').textContent = roleMap[currentUser.role] || currentUser.role;
@@ -484,7 +484,7 @@ async function loadUserList() {
                 <td><span class="badge ${u.isActive ? 'badge-active' : 'badge-inactive'}">${u.isActive ? '启用' : '停用'}</span></td>
                 <td>${formatTime(u.createdAt)}</td>
                 <td>
-                    <button class="btn btn-sm btn-warning" onclick="editUser('${u.id}','${u.username}','${u.displayName}','${u.role}','${u.isActive}')">✏️ 编辑</button>
+                    <button class="btn btn-sm btn-warning" onclick="editUser('${u.id}','${encodeURIComponent(u.username)}','${encodeURIComponent(u.displayName)}','${u.role}','${u.isActive}')">✏️ 编辑</button>
                     <button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}')">🗑️ 删除</button>
                 </td>
             </tr>
@@ -507,12 +507,14 @@ function showCreateUserModal() {
 
 function editUser(id, username, displayName, role, isActive) {
     editingUserId = id;
+    username = decodeURIComponent(username);
+    displayName = decodeURIComponent(displayName);
     document.getElementById('modalTitle').textContent = `编辑用户 - ${username}`;
     document.getElementById('mUsername').value = username; document.getElementById('mUsername').disabled = true;
     document.getElementById('mPassword').value = ''; document.getElementById('mPassword').required = false;
     document.getElementById('mDisplayName').value = displayName;
     document.getElementById('mRole').value = role;
-    document.getElementById('mIsActive').checked = isActive === 'True' || isActive === true;
+    document.getElementById('mIsActive').checked = String(isActive).toLowerCase() === 'true';
     document.getElementById('userModal').classList.remove('hidden');
 }
 

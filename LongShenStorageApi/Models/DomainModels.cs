@@ -158,6 +158,7 @@ public sealed class ReportRequest
 
 // ===== 用户与权限 =====
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum UserRole
 {
     Admin = 0,    // 管理员：全部权限
