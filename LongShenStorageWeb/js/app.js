@@ -153,16 +153,22 @@ function renderSlotVisual(containerId, slots) {
         const hdr = document.createElement('h4'); hdr.textContent = `第 ${row} 排`; rack.appendChild(hdr);
         const grid = document.createElement('div'); grid.className = 'rack-grid';
         const c = document.createElement('div'); c.className = 'header-cell'; c.textContent = '层/列'; grid.appendChild(c);
-        for (let c2 = 1; c2 <= 4; c2++) { const hc = document.createElement('div'); hc.className = 'header-cell'; hc.textContent = `${c2}列`; grid.appendChild(hc); }
+        for (let c2 = 4; c2 >= 1; c2--) { const hc = document.createElement('div'); hc.className = 'header-cell'; hc.textContent = `${c2}列`; grid.appendChild(hc); }
         for (let lv = 8; lv >= 1; lv--) {
             const lh = document.createElement('div'); lh.className = 'header-cell'; lh.textContent = `${lv}层`; grid.appendChild(lh);
-            for (let col = 1; col <= 4; col++) {
+            for (let col = 4; col >= 1; col--) {
                 const slot = slots.find(s => s.rowNumber === row && s.columnNumber === col && s.levelNumber === lv);
                 const cell = document.createElement('div');
-                cell.className = `cell ${slot?.isOccupied ? 'occupied' : 'free'}`;
+                cell.className = `cell ${slot?.isEnabled === false ? 'disabled' : (slot?.isOccupied ? 'occupied' : 'free')}`;
                 if (slot) {
-                    cell.innerHTML = `<div class="slot-status">${slot.isOccupied ? '🔴占用' : '🟢空闲'}</div>`;
-                    cell.title = slot.slotCode;
+                    const isEntrance = slot.rowNumber === 1 && slot.columnNumber === 1 && slot.levelNumber === 1;
+                    const isDisabled = slot.isEnabled === false;
+                    cell.innerHTML = isEntrance
+                        ? `<div class="slot-status" style="font-size:9px;color:#667085">🚪总出入口</div>`
+                        : isDisabled
+                        ? `<div class="slot-status" style="font-size:9px;color:#999">⚪禁用</div>`
+                        : `<div class="slot-status">${slot.isOccupied ? '🔴占用' : '🟢空闲'}</div>`;
+                    cell.title = `${slot.slotCode} (内部编号: ${slot.internalNumber})${isDisabled ? ' [已禁用]' : ''}`;
                     cell.onclick = () => handleSlotClick(slot);
                 }
                 grid.appendChild(cell);
@@ -265,6 +271,8 @@ async function loadOutboundRecent() {
 
 // ===== 货位 =====
 let selectedSlotCode = null;
+let editingSlotData = null;
+
 function handleSlotClick(slot) {
     selectedSlotCode = slot.slotCode;
     showSlotDetail(slot);
@@ -274,11 +282,12 @@ async function showSlotDetail(slot) {
         const items = await api('/workpiecerecords');
         const wp = items.find(i => i.id === slot.workpieceId);
         const isFree = !slot.isOccupied;
+        const isDisabled = slot.isEnabled === false;
         document.getElementById('slotDetailBody').innerHTML = `
             <div style="text-align:center;margin-bottom:20px">
-                <div style="font-size:40px;margin-bottom:8px">${isFree ? '🟢' : '🔴'}</div>
+                <div style="font-size:40px;margin-bottom:8px">${isDisabled ? '⚪' : (isFree ? '🟢' : '🔴')}</div>
                 <div style="font-size:18px;font-weight:bold;color:#1d2939">${slot.slotCode}</div>
-                <div style="font-size:13px;color:#98a2b3;margin-top:2px">${slot.zone} · ${slot.rowNumber}排${slot.columnNumber}列${slot.levelNumber}层</div>
+                <div style="font-size:13px;color:#98a2b3;margin-top:2px">${slot.zone} · ${slot.rowNumber}排${slot.columnNumber}列${slot.levelNumber}层 · 内部编号: ${slot.internalNumber || '-'} ${isDisabled ? '· ⚪已禁用' : ''}</div>
             </div>
             <div style="border-top:1px solid #e8ecf0;padding-top:16px">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:13px">
@@ -297,8 +306,9 @@ async function showSlotDetail(slot) {
                     ` : '<div style="grid-column:1/-1;text-align:center;color:#12b76a;padding:16px 0;font-size:15px">✅ 该库位空闲</div>'}
                 </div>
             </div>
-            <div style="border-top:1px solid #e8ecf0;padding-top:14px;margin-top:4px;text-align:center">
+            <div style="border-top:1px solid #e8ecf0;padding-top:14px;margin-top:4px;text-align:center;display:flex;gap:8px;justify-content:center">
                 <button class="btn" onclick="closeSlotDetail()">关闭</button>
+                <button class="btn btn-primary" onclick="closeSlotDetail();openSlotEdit('${slot.slotCode}')">✏️ 编辑库位</button>
             </div>
         `;
         document.getElementById('slotDetailModal').classList.remove('hidden');
@@ -309,30 +319,85 @@ async function showSlotDetail(slot) {
 function closeSlotDetail() {
     document.getElementById('slotDetailModal').classList.add('hidden');
 }
+
+// ----- 搜索过滤 -----
+function filterSlotTable() {
+    const keyword = (document.getElementById('slotSearch').value || '').toLowerCase().trim();
+    const statusFilter = document.getElementById('slotFilterStatus').value;
+    const rows = document.querySelectorAll('#slotTableBody tr');
+    rows.forEach(tr => {
+        const text = tr.textContent.toLowerCase();
+        const status = tr.dataset.status || '';
+        const matchKeyword = !keyword || text.includes(keyword);
+        const matchStatus = !statusFilter || status === statusFilter;
+        tr.style.display = matchKeyword && matchStatus ? '' : 'none';
+    });
+}
+
+// ----- 编辑库位 -----
+function openSlotEdit(slotCode) {
+    selectedSlotCode = slotCode;
+    // 从加载的数据中查找
+    if (!editingSlotData) return;
+    const slot = editingSlotData.find(s => s.slotCode === slotCode);
+    if (!slot) { toast('未找到库位数据', 'error'); return; }
+    
+    document.getElementById('editSlotCode').textContent = slot.slotCode;
+    document.getElementById('editSlotPosition').textContent = `${slot.zone} · ${slot.rowNumber}排${slot.columnNumber}列${slot.levelNumber}层`;
+    document.getElementById('editInternalNumber').value = slot.internalNumber || 0;
+    document.getElementById('editIsEnabled').checked = slot.isEnabled !== false;
+    document.getElementById('slotEditModal').classList.remove('hidden');
+}
+function closeSlotEdit() {
+    document.getElementById('slotEditModal').classList.add('hidden');
+}
+async function saveSlotEdit() {
+    const slotCode = document.getElementById('editSlotCode').textContent;
+    const internalNumber = parseInt(document.getElementById('editInternalNumber').value) || 0;
+    const isEnabled = document.getElementById('editIsEnabled').checked;
+    try {
+        await api('/storageslots', {
+            method: 'PUT',
+            body: JSON.stringify({ slotCode, internalNumber, isEnabled })
+        });
+        toast('✅ 库位已更新', 'success');
+        closeSlotEdit();
+        await loadSlotPage();
+    } catch(e) { toast('❌ 保存失败: ' + e.message, 'error'); }
+}
+async function abnormalReleaseSlot() {
+    const slotCode = document.getElementById('editSlotCode').textContent;
+    if (!confirm(`确定要异常释放库位 ${slotCode} 吗？\n这将强制清空该库位上的所有工件信息。`)) return;
+    try {
+        await api(`/storageslots/${encodeURIComponent(slotCode)}/abnormal-release`, { method: 'POST' });
+        toast('✅ 异常释放成功', 'success');
+        closeSlotEdit();
+        await loadSlotPage();
+    } catch(e) { toast('❌ 异常释放失败: ' + e.message, 'error'); }
+}
+
 async function loadSlotPage() {
     try {
         const state = await api('/appstate');
+        editingSlotData = state.slots;
         renderSlotVisual('slotMgmtSlots', state.slots);
-        document.getElementById('slotTableBody').innerHTML = state.slots.map(s =>
-            `<tr style="cursor:pointer" onclick="selectedSlotCode='${s.slotCode}'">
+        document.getElementById('slotTableBody').innerHTML = state.slots.map(s => {
+            const isDisabled = s.isEnabled === false;
+            const statusText = isDisabled ? '禁用' : (s.isOccupied ? '占用' : '空闲');
+            const statusKey = isDisabled ? 'disabled' : (s.isOccupied ? 'occupied' : 'free');
+            return `<tr data-status="${statusKey}">
+                <td>${s.internalNumber || '-'}</td>
                 <td>${s.slotCode}</td>
-                <td><span class="badge ${s.isOccupied ? 'badge-inactive' : 'badge-active'}">${s.isOccupied ? '占用' : '空闲'}</span></td>
+                <td><span class="badge ${isDisabled ? 'badge-viewer' : (s.isOccupied ? 'badge-inactive' : 'badge-active')}">${statusText}</span></td>
                 <td>${s.rowNumber}排/${s.columnNumber}列/${s.levelNumber}层</td>
-            </tr>`
-        ).join('');
+                <td>${isDisabled ? '❌' : '✅'}</td>
+                <td><button class="btn btn-sm btn-primary" onclick="openSlotEdit('${s.slotCode}')">✏️ 编辑</button></td>
+            </tr>`;
+        }).join('');
         document.getElementById('slotInventoryBody').innerHTML = state.inventory.slice(0,20).map(r =>
             `<tr><td>${r.palletNumber}</td><td>${r.modelType}</td><td>${r.slotCode}</td><td>${formatTime(r.inboundTime)}</td></tr>`
         ).join('') || '<tr><td colspan="4" class="empty-state">暂无数据</td></tr>';
     } catch(e) { toast('加载失败', 'error'); }
-}
-async function showNextAvailable() {
-    try { const d = await api('/storageslots/next-available'); toast(d.slotCode ? `✅ ${d.message}` : `❌ ${d.message}`, d.slotCode ? 'success' : 'error'); }
-    catch(e) { toast('查询失败', 'error'); }
-}
-async function releaseSelectedSlot() {
-    if (!selectedSlotCode) { toast('请点击一个空闲货位', 'error'); return; }
-    try { await api(`/storageslots/${encodeURIComponent(selectedSlotCode)}/release`, {method:'POST'}); toast('✅ 已释放', 'success'); selectedSlotCode = null; await loadSlotPage(); }
-    catch(e) { toast('❌ ' + e.message, 'error'); }
 }
 
 // ===== 台账 =====

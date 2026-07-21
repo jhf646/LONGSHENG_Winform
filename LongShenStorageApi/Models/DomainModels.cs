@@ -40,6 +40,18 @@ public sealed class StorageSlot
     [DisplayName("排")] public int RowNumber { get; set; }
     [DisplayName("列")] public int ColumnNumber { get; set; }
     [DisplayName("层")] public int LevelNumber { get; set; }
+    [DisplayName("内部编号")] public int InternalNumber { get; set; }
+    [DisplayName("启用")] public bool IsEnabled { get; set; } = true;
+}
+
+/// <summary>
+/// 库位更新请求
+/// </summary>
+public sealed class SlotUpdateRequest
+{
+    public string SlotCode { get; set; } = string.Empty;
+    public int InternalNumber { get; set; }
+    public bool IsEnabled { get; set; } = true;
 }
 
 public sealed class LedgerEntry

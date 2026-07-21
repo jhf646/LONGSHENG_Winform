@@ -280,7 +280,9 @@ body {
 }
 .rack-grid .cell.free { background: #eafaf1; }
 .rack-grid .cell.occupied { background: #fde8e8; }
+.rack-grid .cell.disabled { background: #f0f0f0; border: 1px dashed #ccc; opacity: 0.7; }
 .rack-grid .cell:hover { opacity: 0.8; }
+.rack-grid .cell .slot-number { font-size: 14px; font-weight: bold; color: #1d2939; line-height: 1.2; }
 .rack-grid .cell .slot-status { font-size: 9px; font-weight: bold; }
 .rack-grid .header-cell {
     background: #f0f4f8; display: flex; align-items: center;

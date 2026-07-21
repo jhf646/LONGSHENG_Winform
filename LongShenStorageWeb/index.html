@@ -156,15 +156,21 @@
     <!-- 货位 -->
     <div class="page" id="page-slots">
       <div class="card"><div class="card-header">🗄️ 货位可视化</div>
-        <div class="card-body"><div class="legend"><div class="legend-item"><div class="legend-swatch" style="background:#eafaf1"></div>空闲</div><div class="legend-item"><div class="legend-swatch" style="background:#fde8e8"></div>占用</div></div><div class="slot-visual" id="slotMgmtSlots"></div></div>
+        <div class="card-body"><div class="legend"><div class="legend-item"><div class="legend-swatch" style="background:#eafaf1"></div>空闲</div><div class="legend-item"><div class="legend-swatch" style="background:#fde8e8"></div>占用</div><div class="legend-item"><div class="legend-swatch" style="background:#f0f0f0;border:1px dashed #ccc"></div>禁用</div></div><div class="slot-visual" id="slotMgmtSlots"></div></div>
       </div>
-      <div class="card"><div class="card-header">📋 货位列表</div>
+      <div class="card"><div class="card-header">🔍 库位搜索与编辑</div>
         <div class="card-body">
-          <div class="table-wrap" style="max-height:200px"><table class="data-table"><thead><tr><th>货位号</th><th>状态</th><th>位置</th></tr></thead><tbody id="slotTableBody"></tbody></table></div>
-          <div class="btn-group">
-            <button class="btn btn-primary" onclick="showNextAvailable()">🔍 推荐空闲</button>
-            <button class="btn btn-danger perm-write" onclick="releaseSelectedSlot()">🔓 释放货位</button>
+          <div style="display:flex;gap:12px;margin-bottom:12px;align-items:center">
+            <input type="text" id="slotSearch" placeholder="搜索货位号、内部编号、位置..." style="flex:1;padding:8px 12px;font-size:14px;border:1px solid var(--border);border-radius:6px;outline:none" oninput="filterSlotTable()">
+            <select id="slotFilterStatus" style="padding:8px 12px;font-size:14px;border:1px solid var(--border);border-radius:6px;outline:none" onchange="filterSlotTable()">
+              <option value="">全部状态</option>
+              <option value="free">空闲</option>
+              <option value="occupied">占用</option>
+              <option value="disabled">禁用</option>
+            </select>
+            <button class="btn btn-primary" onclick="loadSlotPage()">🔄 刷新</button>
           </div>
+          <div class="table-wrap" style="max-height:400px"><table class="data-table"><thead><tr><th>内部编号</th><th>货位号</th><th>状态</th><th>位置</th><th>启用</th><th>操作</th></tr></thead><tbody id="slotTableBody"></tbody></table></div>
         </div>
       </div>
       <div class="card"><div class="card-header">📦 在库工件</div>
@@ -384,6 +390,39 @@
     </div>
     <div class="modal-body" id="slotDetailBody">
       <div style="text-align:center;padding:20px;color:#98a2b3">加载中...</div>
+    </div>
+  </div>
+</div>
+<!-- 库位编辑弹窗 -->
+<div class="modal-overlay hidden" id="slotEditModal">
+  <div class="modal-box" style="max-width:500px">
+    <div class="modal-header"><span>✏️ 编辑库位</span><a href="javascript:closeSlotEdit()" style="text-decoration:none;color:#999;font-size:18px">✕</a></div>
+    <div class="modal-body">
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:20px;font-weight:bold;color:#1d2939" id="editSlotCode">-</div>
+        <div style="font-size:13px;color:#98a2b3;margin-top:4px" id="editSlotPosition">-</div>
+      </div>
+      <div style="border-top:1px solid #e8ecf0;padding-top:16px">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr">
+          <div class="form-group"><label>内部编号</label><input type="number" id="editInternalNumber" min="0" max="99"></div>
+          <div class="form-group" style="justify-content:flex-end">
+            <label style="display:flex;align-items:center;gap:8px;margin-top:18px">
+              <input type="checkbox" id="editIsEnabled" checked style="width:18px;height:18px"> 启用库位
+            </label>
+          </div>
+        </div>
+      </div>
+      <div style="border-top:1px solid #e8ecf0;padding-top:14px;margin-top:14px">
+        <div style="font-size:13px;font-weight:bold;color:#d92d20;margin-bottom:8px">⚠️ 危险操作</div>
+        <button class="btn btn-danger" onclick="abnormalReleaseSlot()" style="width:100%">
+          🔓 异常释放 - 强制清空该库位的工件信息
+        </button>
+        <div style="font-size:11px;color:#98a2b3;margin-top:4px">异常释放会强制删除该库位上的工件记录并释放库位，请谨慎操作。</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeSlotEdit()">取消</button>
+      <button class="btn btn-primary" onclick="saveSlotEdit()">💾 保存</button>
     </div>
   </div>
 </div>

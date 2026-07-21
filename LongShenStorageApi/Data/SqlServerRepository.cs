@@ -36,7 +36,7 @@ public sealed class SqlServerRepository
             IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='AlertSettings' AND xtype='U')
             CREATE TABLE AlertSettings (Id INT PRIMARY KEY DEFAULT 1 CHECK (Id = 1), MinThreshold INT NOT NULL DEFAULT 2, MaxThreshold INT NOT NULL DEFAULT 18);
             IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='StorageSlots' AND xtype='U')
-            CREATE TABLE StorageSlots (SlotCode NVARCHAR(50) PRIMARY KEY, IsOccupied BIT NOT NULL DEFAULT 0, WorkpieceId UNIQUEIDENTIFIER NULL, Zone NVARCHAR(50) NOT NULL DEFAULT '', RowNumber INT NOT NULL, ColumnNumber INT NOT NULL, LevelNumber INT NOT NULL);
+            CREATE TABLE StorageSlots (SlotCode NVARCHAR(50) PRIMARY KEY, IsOccupied BIT NOT NULL DEFAULT 0, WorkpieceId UNIQUEIDENTIFIER NULL, Zone NVARCHAR(50) NOT NULL DEFAULT '', RowNumber INT NOT NULL, ColumnNumber INT NOT NULL, LevelNumber INT NOT NULL, InternalNumber INT NOT NULL DEFAULT 0, IsEnabled BIT NOT NULL DEFAULT 1);
             IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WorkpieceRecords' AND xtype='U')
             CREATE TABLE WorkpieceRecords (Id UNIQUEIDENTIFIER PRIMARY KEY, InboundTime DATETIME2 NOT NULL DEFAULT GETDATE(), SlotCode NVARCHAR(50) NOT NULL, LastOperator NVARCHAR(100) NOT NULL DEFAULT '', LastUpdated DATETIME2 NOT NULL DEFAULT GETDATE(), Notes NVARCHAR(500) NOT NULL DEFAULT '', PalletNumber NVARCHAR(50) NOT NULL DEFAULT '', ToolingNumber NVARCHAR(200) NOT NULL DEFAULT '', ProjectNumber NVARCHAR(200) NOT NULL DEFAULT '', ModelType NVARCHAR(200) NOT NULL DEFAULT '', WorkOrder NVARCHAR(200) NOT NULL DEFAULT '', CellNumber NVARCHAR(200) NOT NULL DEFAULT '', ComponentSections INT NOT NULL DEFAULT 1, CustomerName NVARCHAR(200) NOT NULL DEFAULT '');
             IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='LedgerEntries' AND xtype='U')
@@ -69,6 +69,22 @@ public sealed class SqlServerRepository
             -- 用户表
             IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Users' AND xtype='U')
             CREATE TABLE Users (Id UNIQUEIDENTIFIER PRIMARY KEY, Username NVARCHAR(100) NOT NULL UNIQUE, PasswordHash NVARCHAR(500) NOT NULL, Role INT NOT NULL DEFAULT 1, DisplayName NVARCHAR(100) NOT NULL DEFAULT '', IsActive BIT NOT NULL DEFAULT 1, CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE());
+            -- 向下兼容：内部编号和启用状态
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('StorageSlots') AND name='InternalNumber')
+                ALTER TABLE StorageSlots ADD InternalNumber INT NOT NULL DEFAULT 0;
+            IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('StorageSlots') AND name='IsEnabled')
+                ALTER TABLE StorageSlots ADD IsEnabled BIT NOT NULL DEFAULT 1;
+            -- 重新计算所有行的内部编号（覆盖旧错误数据）
+            -- 蛇形编号：1排底层右向，1排偶数层左向，1排奇数层(≥3)右向；2排奇数层右向，2排偶数层左向
+            EXEC('UPDATE StorageSlots SET InternalNumber =
+                CASE
+                    WHEN RowNumber = 1 AND LevelNumber = 1 AND ColumnNumber = 1 THEN 0
+                    WHEN RowNumber = 1 AND LevelNumber = 1 THEN ColumnNumber - 1
+                    WHEN RowNumber = 1 AND LevelNumber % 2 = 0 THEN LevelNumber * 4 - 4 + (4 - ColumnNumber)
+                    WHEN RowNumber = 1 THEN LevelNumber * 4 - 4 + (ColumnNumber - 1)
+                    WHEN RowNumber = 2 AND LevelNumber % 2 = 1 THEN 27 + LevelNumber * 4 + ColumnNumber
+                    ELSE 32 + LevelNumber * 4 - ColumnNumber
+                END');
             -- 下拉选项持久化表
             IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='DropdownOptions' AND xtype='U')
             CREATE TABLE DropdownOptions (Category NVARCHAR(50) NOT NULL, Value NVARCHAR(200) NOT NULL, PRIMARY KEY (Category, Value));
@@ -112,10 +128,10 @@ public sealed class SqlServerRepository
         var slots = new List<StorageSlot>();
         using var conn = new SqlConnection(_connectionString);
         conn.Open();
-        using var cmd = new SqlCommand("SELECT SlotCode, IsOccupied, WorkpieceId, Zone, RowNumber, ColumnNumber, LevelNumber FROM StorageSlots ORDER BY RowNumber, ColumnNumber, LevelNumber", conn);
+        using var cmd = new SqlCommand("SELECT SlotCode, IsOccupied, WorkpieceId, Zone, RowNumber, ColumnNumber, LevelNumber, InternalNumber, IsEnabled FROM StorageSlots ORDER BY RowNumber, ColumnNumber, LevelNumber", conn);
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
-            slots.Add(new StorageSlot { SlotCode = reader.GetString(0), IsOccupied = reader.GetBoolean(1), WorkpieceId = reader.IsDBNull(2) ? null : reader.GetGuid(2), Zone = reader.GetString(3), RowNumber = reader.GetInt32(4), ColumnNumber = reader.GetInt32(5), LevelNumber = reader.GetInt32(6) });
+            slots.Add(new StorageSlot { SlotCode = reader.GetString(0), IsOccupied = reader.GetBoolean(1), WorkpieceId = reader.IsDBNull(2) ? null : reader.GetGuid(2), Zone = reader.GetString(3), RowNumber = reader.GetInt32(4), ColumnNumber = reader.GetInt32(5), LevelNumber = reader.GetInt32(6), InternalNumber = reader.GetInt32(7), IsEnabled = reader.GetBoolean(8) });
         return slots;
     }
 
@@ -226,7 +242,7 @@ public sealed class SqlServerRepository
 
     private static void SaveSlots(SqlConnection conn, SqlTransaction tx, List<StorageSlot> slots)
     {
-        using var cmd = new SqlCommand(@"MERGE StorageSlots AS target USING (SELECT @SlotCode AS SlotCode) AS source ON target.SlotCode = source.SlotCode WHEN MATCHED THEN UPDATE SET IsOccupied = @Occ, WorkpieceId = @Wid, Zone = @Zone, RowNumber = @Row, ColumnNumber = @Col, LevelNumber = @Lev WHEN NOT MATCHED THEN INSERT (SlotCode, IsOccupied, WorkpieceId, Zone, RowNumber, ColumnNumber, LevelNumber) VALUES (@SlotCode, @Occ, @Wid, @Zone, @Row, @Col, @Lev);", conn, tx);
+        using var cmd = new SqlCommand(@"MERGE StorageSlots AS target USING (SELECT @SlotCode AS SlotCode) AS source ON target.SlotCode = source.SlotCode WHEN MATCHED THEN UPDATE SET IsOccupied = @Occ, WorkpieceId = @Wid, Zone = @Zone, RowNumber = @Row, ColumnNumber = @Col, LevelNumber = @Lev, InternalNumber = @IntNum, IsEnabled = @Enabled WHEN NOT MATCHED THEN INSERT (SlotCode, IsOccupied, WorkpieceId, Zone, RowNumber, ColumnNumber, LevelNumber, InternalNumber, IsEnabled) VALUES (@SlotCode, @Occ, @Wid, @Zone, @Row, @Col, @Lev, @IntNum, @Enabled);", conn, tx);
         cmd.Parameters.Add("@SlotCode", System.Data.SqlDbType.NVarChar, 50);
         cmd.Parameters.Add("@Occ", System.Data.SqlDbType.Bit);
         cmd.Parameters.Add("@Wid", System.Data.SqlDbType.UniqueIdentifier);
@@ -234,6 +250,8 @@ public sealed class SqlServerRepository
         cmd.Parameters.Add("@Row", System.Data.SqlDbType.Int);
         cmd.Parameters.Add("@Col", System.Data.SqlDbType.Int);
         cmd.Parameters.Add("@Lev", System.Data.SqlDbType.Int);
+        cmd.Parameters.Add("@IntNum", System.Data.SqlDbType.Int);
+        cmd.Parameters.Add("@Enabled", System.Data.SqlDbType.Bit);
         foreach (var slot in slots)
         {
             cmd.Parameters["@SlotCode"].Value = slot.SlotCode;
@@ -243,6 +261,8 @@ public sealed class SqlServerRepository
             cmd.Parameters["@Row"].Value = slot.RowNumber;
             cmd.Parameters["@Col"].Value = slot.ColumnNumber;
             cmd.Parameters["@Lev"].Value = slot.LevelNumber;
+            cmd.Parameters["@IntNum"].Value = slot.InternalNumber;
+            cmd.Parameters["@Enabled"].Value = slot.IsEnabled;
             cmd.ExecuteNonQuery();
         }
     }
@@ -426,7 +446,33 @@ public sealed class SqlServerRepository
         for (var row = 1; row <= 2; row++)
             for (var column = 1; column <= 4; column++)
                 for (var level = 1; level <= 8; level++)
-                    slots.Add(new StorageSlot { RowNumber = row, ColumnNumber = column, LevelNumber = level, Zone = $"{row}排", SlotCode = $"{row}排-{column}列-{level}层", IsOccupied = false });
+                {
+                    int internalNumber;
+                    if (row == 1 && level == 1 && column == 1)
+                        internalNumber = 0; // 总出入口
+                    else if (row == 1 && level == 1)
+                        internalNumber = column - 1; // 底层右向：col2=1, col3=2, col4=3
+                    else if (row == 1 && level % 2 == 0) // 1排偶数层左向：col4→col1
+                        internalNumber = level * 4 - 4 + (4 - column);
+                    else if (row == 1) // 1排奇数层(≥3)右向：col1→col4
+                        internalNumber = level * 4 - 4 + (column - 1);
+                    else if (row == 2 && level % 2 == 1) // 2排奇数层右向：col1→col4
+                        internalNumber = 27 + level * 4 + column;
+                    else // 2排偶数层左向：col4→col1
+                        internalNumber = 32 + level * 4 - column;
+
+                    slots.Add(new StorageSlot
+                    {
+                        RowNumber = row,
+                        ColumnNumber = column,
+                        LevelNumber = level,
+                        Zone = $"{row}排",
+                        SlotCode = $"{row}排-{column}列-{level}层",
+                        IsOccupied = false,
+                        InternalNumber = internalNumber,
+                        IsEnabled = true
+                    });
+                }
         return slots;
     }
 

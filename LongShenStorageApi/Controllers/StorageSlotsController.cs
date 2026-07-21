@@ -46,4 +46,51 @@ public class StorageSlotsController : ControllerBase
         _repo.Save(state);
         return Ok(new { message = $"货位 {slotCode} 已释放" });
     }
+
+    /// <summary>更新库位（内部编号、启用状态）</summary>
+    [HttpPut]
+    public IActionResult Update([FromBody] SlotUpdateRequest request)
+    {
+        var state = _repo.Load();
+        var slot = state.Slots.FirstOrDefault(s => s.SlotCode == request.SlotCode);
+        if (slot is null) return NotFound(new { error = "货位不存在" });
+
+        slot.InternalNumber = request.InternalNumber;
+        slot.IsEnabled = request.IsEnabled;
+        _repo.Save(state);
+        return Ok(new { message = $"货位 {slot.SlotCode} 已更新" });
+    }
+
+    /// <summary>异常释放：清空库位信息（强制释放，会删除工件记录）</summary>
+    [HttpPost("{slotCode}/abnormal-release")]
+    public IActionResult AbnormalRelease(string slotCode)
+    {
+        var state = _repo.Load();
+        var slot = state.Slots.FirstOrDefault(s => s.SlotCode == slotCode);
+        if (slot is null) return NotFound(new { error = "货位不存在" });
+
+        // 如果有工件占用，删除工件记录
+        if (slot.IsOccupied && slot.WorkpieceId.HasValue)
+        {
+            var record = state.Inventory.FirstOrDefault(r => r.Id == slot.WorkpieceId.Value);
+            if (record != null)
+            {
+                state.Inventory.Remove(record);
+                state.Ledger.Add(new LedgerEntry
+                {
+                    Type = TransactionType.Outbound,
+                    Timestamp = DateTime.Now,
+                    OperatorName = "系统(异常释放)",
+                    PalletNumber = record.PalletNumber,
+                    SlotCode = record.SlotCode,
+                    ActionDescription = $"异常释放：托盘{record.PalletNumber}从{slot.SlotCode}强制出库"
+                });
+            }
+        }
+
+        slot.IsOccupied = false;
+        slot.WorkpieceId = null;
+        _repo.Save(state);
+        return Ok(new { message = $"货位 {slotCode} 异常释放成功" });
+    }
 }
