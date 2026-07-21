@@ -74,16 +74,14 @@ public sealed class SqlServerRepository
                 ALTER TABLE StorageSlots ADD InternalNumber INT NOT NULL DEFAULT 0;
             IF NOT EXISTS (SELECT * FROM syscolumns WHERE id=OBJECT_ID('StorageSlots') AND name='IsEnabled')
                 ALTER TABLE StorageSlots ADD IsEnabled BIT NOT NULL DEFAULT 1;
-            -- 重新计算所有行的内部编号（覆盖旧错误数据）
-            -- 蛇形编号：1排底层右向，1排偶数层左向，1排奇数层(≥3)右向；2排奇数层右向，2排偶数层左向
+            -- 逐层优先不分排：1层→8层，每层内先1排后2排
             EXEC('UPDATE StorageSlots SET InternalNumber =
                 CASE
                     WHEN RowNumber = 1 AND LevelNumber = 1 AND ColumnNumber = 1 THEN 0
-                    WHEN RowNumber = 1 AND LevelNumber = 1 THEN ColumnNumber - 1
-                    WHEN RowNumber = 1 AND LevelNumber % 2 = 0 THEN LevelNumber * 4 - 4 + (4 - ColumnNumber)
-                    WHEN RowNumber = 1 THEN LevelNumber * 4 - 4 + (ColumnNumber - 1)
-                    WHEN RowNumber = 2 AND LevelNumber % 2 = 1 THEN 27 + LevelNumber * 4 + ColumnNumber
-                    ELSE 32 + LevelNumber * 4 - ColumnNumber
+                    WHEN LevelNumber = 1 AND RowNumber = 1 THEN ColumnNumber - 1
+                    WHEN LevelNumber = 1 AND RowNumber = 2 THEN ColumnNumber + 3
+                    WHEN RowNumber = 1 THEN 8 * LevelNumber - 9 + ColumnNumber
+                    ELSE 8 * LevelNumber - 5 + ColumnNumber
                 END');
             -- 下拉选项持久化表
             IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='DropdownOptions' AND xtype='U')
@@ -448,18 +446,17 @@ public sealed class SqlServerRepository
                 for (var level = 1; level <= 8; level++)
                 {
                     int internalNumber;
+                    // 逐层优先不分排：1层→8层，每层内先1排后2排
                     if (row == 1 && level == 1 && column == 1)
                         internalNumber = 0; // 总出入口
-                    else if (row == 1 && level == 1)
-                        internalNumber = column - 1; // 底层右向：col2=1, col3=2, col4=3
-                    else if (row == 1 && level % 2 == 0) // 1排偶数层左向：col4→col1
-                        internalNumber = level * 4 - 4 + (4 - column);
-                    else if (row == 1) // 1排奇数层(≥3)右向：col1→col4
-                        internalNumber = level * 4 - 4 + (column - 1);
-                    else if (row == 2 && level % 2 == 1) // 2排奇数层右向：col1→col4
-                        internalNumber = 27 + level * 4 + column;
-                    else // 2排偶数层左向：col4→col1
-                        internalNumber = 32 + level * 4 - column;
+                    else if (level == 1 && row == 1)
+                        internalNumber = column - 1; // 1层1排：col2=1, col3=2, col4=3
+                    else if (level == 1 && row == 2)
+                        internalNumber = column + 3; // 1层2排：col1=4, col2=5, col3=6, col4=7
+                    else if (row == 1) // 2~8层1排
+                        internalNumber = 8 * level - 9 + column;
+                    else // 2~8层2排
+                        internalNumber = 8 * level - 5 + column;
 
                     slots.Add(new StorageSlot
                     {
