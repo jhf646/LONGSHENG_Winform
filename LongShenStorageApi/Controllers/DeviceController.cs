@@ -88,7 +88,7 @@ public class DeviceController : ControllerBase
         return Ok(results);
     }
 
-    /// <summary>读取所有监控寄存器</summary>
+    /// <summary>读取所有监控寄存器（一次性批量读取 4008~4031）</summary>
     [HttpGet("monitor")]
     public async Task<ActionResult<object>> MonitorAll()
     {
@@ -97,26 +97,38 @@ public class DeviceController : ControllerBase
             var readRegs = _config.GetReadRegisters();
             var writeRegs = _config.GetWriteRegisters();
 
-            async Task<ushort> R(int a) { try { return await _device.ReadHoldingRegisterAsync(a); } catch { return 0; } }
+            // 一次性读取24个寄存器（4008~4031），对应PLC指令：01 03 0F A8 00 18
+            ushort[] vals;
+            try
+            {
+                vals = await _device.ReadHoldingRegistersAsync(4008, 24);
+            }
+            catch
+            {
+                vals = new ushort[24];
+            }
+
+            ushort V(int offset) => offset < vals.Length ? vals[offset] : (ushort)0;
 
             var data = new Dictionary<string, object>
             {
-                ["status"] = new { mode = await R(102), state = await R(100), step = await R(103), errorCode = await R(101) },
-                ["position"] = new { x = await R(107), y = await R(108), zDeep = await R(109), zShallow = await R(110) },
+                ["status"] = new { state = V(0), errorCode = V(1), mode = V(2), step = V(3) },
                 ["flags"] = new
                 {
-                    taskDone = await R(104), transferState = await R(105), canMove = await R(111),
-                    leftIn = await R(112), leftOut = await R(113), rightIn = await R(114),
-                    rightOut = await R(115), actionDone = await R(116), carrierPos = await R(117)
+                    taskDone = V(4), transferState = V(5), spare = V(6),
+                    leftIn = V(12), leftOut = V(13), rightIn = V(14),
+                    rightOut = V(15), actionDone = V(16), carrierPos = V(17)
                 },
+                ["position"] = new { x = V(7), y = V(8), zDeep = V(9), zShallow = V(10) },
+                ["canMove"] = V(11),
                 ["connected"] = _device.IsConnected,
                 ["configName"] = _config.GetConfig().DeviceName,
                 ["command"] = new
                 {
-                    deviceNo = await R(101), seqNo = await R(102), actionFlag = await R(103),
-                    aRow = await R(104), aCol = await R(105), aLevel = await R(106),
-                    bRow = await R(107), bCol = await R(108), bLevel = await R(109),
-                    param1 = await R(110), param2 = await R(111), actionType = await R(112)
+                    deviceNo = 0, seqNo = 0, actionFlag = 0,
+                    aRow = 0, aCol = 0, aLevel = 0,
+                    bRow = 0, bCol = 0, bLevel = 0,
+                    param1 = 0, param2 = 0, actionType = 0
                 }
             };
             return Ok(data);
