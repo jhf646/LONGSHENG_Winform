@@ -308,6 +308,18 @@ body {
 .modal-body { padding: 20px; }
 .modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); text-align: right; }
 
+/* ===== 进度条 ===== */
+.progress-bar-bg { height: 6px; background: #e8ecf0; border-radius: 3px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.5s ease; }
+
+/* ===== PLC任务日志 ===== */
+.plc-step { display: flex; align-items: flex-start; gap: 8px; padding: 4px 0; }
+.plc-step-icon { flex-shrink: 0; width: 20px; text-align: center; }
+.plc-step-done { color: var(--success); }
+.plc-step-active { color: var(--primary); font-weight: 600; }
+.plc-step-error { color: var(--danger); font-weight: 600; }
+.plc-step-wait { color: var(--text-secondary); }
+
 /* ===== Toast ===== */
 .toast {
     position: fixed; top: 20px; right: 20px; padding: 12px 24px; border-radius: 8px;

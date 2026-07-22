@@ -1,10 +1,22 @@
 // ===== 氢晨库存管理系统 Web v3 =====
 const API_BASE = 'http://localhost:5000/api';
 let authToken = localStorage.getItem('ls_token') || '';
-let currentUser = JSON.parse(localStorage.getItem('ls_user') || 'null');
+let currentUser = null;
+try { currentUser = JSON.parse(localStorage.getItem('ls_user') || 'null'); } catch(e) { localStorage.removeItem('ls_user'); }
 
 // 内置超级管理员账号1001的固定ID（不可删除/修改）
 const BUILT_IN_USER_ID = '10000000-0000-0000-0000-000000000001';
+
+// 托盘号输入格式化：提取数字→补零三位→扫描时自动清空
+function formatPalletInput(el) {
+    const digits = el.value.replace(/\D/g, '');
+    // 检测是否为扫码输入（快速连续输入）
+    if (digits.length > 0 && digits.length <= 3) {
+        el.value = digits.padStart(3, '0');
+    } else if (digits.length > 3) {
+        el.value = digits.slice(-3).padStart(3, '0');
+    }
+}
 
 // ===== 工具 =====
 async function api(path, options = {}) {
@@ -214,39 +226,110 @@ function clearInbound() {
 async function handleInbound() {
     const operator = document.getElementById('inOperator').value.trim();
     if (!operator) { toast('请先登录', 'error'); return; }
-    const payload = {
-        palletNumber: document.getElementById('inPallet').value.trim(),
-        toolingNumber: document.getElementById('inTooling').value.trim(),
-        projectNumber: document.getElementById('inProject').value.trim(),
-        modelType: document.getElementById('inModel').value.trim(),
-        workOrder: document.getElementById('inWorkOrder').value.trim(),
-        cellNumber: document.getElementById('inCellNumber').value.trim(),
-        componentSections: parseInt(document.getElementById('inComponentSections').value) || 1,
-        customerName: document.getElementById('inCustomer').value.trim(),
-        operatorName: operator,
-        specifiedSlot: null,
-        notes: document.getElementById('inNotes').value.trim()
-    };
+    const palletNumber = document.getElementById('inPallet').value.trim();
+    if (!palletNumber) { toast('请输入托盘号', 'error'); return; }
+
+    // 先查询推荐空闲货位
+    showPlcTaskModal('📥 入库任务执行中');
+    addPlcStep(1, '查询PLC状态', '', 'active');
     try {
-        await api('/workpiecerecords/inbound', { method: 'POST', body: JSON.stringify(payload) });
-        toast(`✅ ${payload.palletNumber || '?'} 入库成功`, 'success');
-        lastWorkOrder = payload.workOrder; lastCellNumber = payload.cellNumber;
-        clearInbound();
-        document.getElementById('inWorkOrder').value = lastWorkOrder;
-        document.getElementById('inCellNumber').value = lastCellNumber;
-        const pallet = document.getElementById('inPallet').value.trim();
-        const tooling = document.getElementById('inTooling').value.trim();
-        const project = document.getElementById('inProject').value.trim();
-        const model = document.getElementById('inModel').value.trim();
-        const customer = document.getElementById('inCustomer').value.trim();
-        try { await api('/appstate/dropdowns', { method: 'POST', body: JSON.stringify({
-            palletNumbers: pallet ? [pallet] : [], toolingNumbers: tooling ? [tooling] : [],
-            projectNumbers: project ? [project] : [], modelTypes: model ? [model] : [],
-            customerNames: customer ? [customer] : []
-        }) }); } catch(e) {}
-        await Promise.all([loadDashboard(), loadDropdowns()]);
-        loadInboundRecent();
-    } catch (e) { toast('❌ 入库失败: ' + e.message, 'error'); }
+        // 步骤1: 查询PLC状态
+        const monitor = await api('/device/monitor');
+        const status = monitor.status?.state || 0;
+        const statusText = { 1: '空闲中', 2: '运行中', 3: '故障中', 4: '暂停中' };
+        if (status !== 1) {
+            updatePlcStep(1, `立库状态: ${statusText[status] || status}，无法入库`, 'error');
+            toast('❌ 立库状态异常，无法入库', 'error');
+            document.getElementById('plcTaskCloseBtn').classList.remove('hidden');
+            return;
+        }
+        updatePlcStep(1, '立库空闲中 ✅', 'done');
+
+        // 步骤2: 查询推荐货位（根据托盘号匹配内部编号）
+        addPlcStep(2, '查询推荐货位', '', 'active');
+        const state = await api('/appstate');
+        // 从托盘号提取数字匹配内部编号
+        const numMatch = palletNumber.match(/\d+/);
+        let targetSlot = null;
+        if (numMatch) {
+            const palletNum = parseInt(numMatch[0]);
+            targetSlot = state.slots.find(s => s.internalNumber === palletNum && !s.isOccupied && s.isEnabled !== false);
+        }
+        if (!targetSlot) {
+            targetSlot = state.slots.find(s => !s.isOccupied && s.isEnabled !== false);
+        }
+        if (!targetSlot) {
+            updatePlcStep(2, '无空闲货位', 'error');
+            toast('❌ 无空闲货位', 'error');
+            document.getElementById('plcTaskCloseBtn').classList.add('hidden');
+            return;
+        }
+        updatePlcStep(2, `推荐货位: ${targetSlot.slotCode} (${targetSlot.rowNumber}排/${targetSlot.columnNumber}列/${targetSlot.levelNumber}层)`, 'done');
+
+        // 步骤3-5: 执行PLC任务
+        addPlcStep(3, '发送PLC指令', '', 'active');
+        const taskPayload = {
+            palletNumber: palletNumber,
+            toolingNumber: document.getElementById('inTooling').value.trim() || null,
+            projectNumber: document.getElementById('inProject').value.trim() || null,
+            modelType: document.getElementById('inModel').value.trim() || null,
+            workOrder: document.getElementById('inWorkOrder').value.trim() || null,
+            cellNumber: document.getElementById('inCellNumber').value.trim() || null,
+            componentSections: parseInt(document.getElementById('inComponentSections').value) || 1,
+            customerName: document.getElementById('inCustomer').value.trim() || null,
+            operatorName: operator,
+            notes: document.getElementById('inNotes').value.trim() || null,
+            row: targetSlot.rowNumber,
+            col: targetSlot.columnNumber,
+            level: targetSlot.levelNumber
+        };
+
+        const resp = await api('/device/inbound-task', { method: 'POST', body: JSON.stringify(taskPayload) });
+        if (resp.logs) resp.logs.forEach(l => addPlcLog(l));
+
+        if (resp.steps) {
+            resp.steps.forEach((s, i) => {
+                const status = s.name.includes('中断') || s.name.includes('失败') || s.name.includes('异常') ? 'error' : 'done';
+                const stepNum = i + 3;
+                if (document.getElementById(`plcStep_${stepNum}`)) {
+                    updatePlcStep(stepNum, s.detail || s.name, status);
+                } else {
+                    addPlcStep(stepNum, s.name, s.detail || '', status);
+                }
+            });
+        }
+
+        if (resp.success) {
+            document.getElementById('plcTaskProgress').style.width = '100%';
+            toast('✅ 入库成功', 'success');
+            // 保存批次信息
+            lastWorkOrder = document.getElementById('inWorkOrder').value.trim();
+            lastCellNumber = document.getElementById('inCellNumber').value.trim();
+            // 保存下拉选项
+            const tooling = document.getElementById('inTooling').value.trim();
+            const project = document.getElementById('inProject').value.trim();
+            const model = document.getElementById('inModel').value.trim();
+            const customer = document.getElementById('inCustomer').value.trim();
+            try { await api('/appstate/dropdowns', { method: 'POST', body: JSON.stringify({
+                palletNumbers: [palletNumber], toolingNumbers: tooling ? [tooling] : [],
+                projectNumbers: project ? [project] : [], modelTypes: model ? [model] : [],
+                customerNames: customer ? [customer] : []
+            }) }); } catch(e) {}
+            clearInbound();
+            document.getElementById('inWorkOrder').value = lastWorkOrder;
+            document.getElementById('inCellNumber').value = lastCellNumber;
+            await Promise.all([loadDashboard(), loadDropdowns()]);
+            loadInboundRecent();
+        } else {
+            document.getElementById('plcTaskProgress').style.width = '100%';
+            document.getElementById('plcTaskProgress').style.background = 'var(--danger)';
+            toast('❌ ' + (resp.error || '入库失败'), 'error');
+        }
+    } catch (e) {
+        addPlcLog(`[${new Date().toLocaleTimeString()}] ❌ 异常: ${e.message}`);
+        toast('❌ 入库异常: ' + e.message, 'error');
+    }
+    document.getElementById('plcTaskCloseBtn').classList.remove('hidden');
 }
 
 async function loadInboundRecent() {
@@ -337,16 +420,72 @@ async function handleOutbound() {
     const recordId = selectedOutboundId;
     const operator = document.getElementById('outOperator').value.trim();
     if (!recordId || !operator) { toast('请选择工件并输入操作人员', 'error'); return; }
+
+    // 获取选中工件的货位信息
+    const items = window._outboundInventory || [];
+    const item = items.find(r => r.id === recordId);
+    if (!item || !item.slotCode) { toast('未找到工件货位信息', 'error'); return; }
+
+    // 解析槽位编码 (格式: "1排-1列-1层")
+    const slotMatch = item.slotCode.match(/(\d+)排-(\d+)列-(\d+)层/);
+    if (!slotMatch) { toast('货位编码解析失败', 'error'); return; }
+
+    const row = parseInt(slotMatch[1]);
+    const col = parseInt(slotMatch[2]);
+    const level = parseInt(slotMatch[3]);
+
+    // 执行PLC出库任务
+    showPlcTaskModal('📤 出库任务执行中');
+    addPlcStep(1, '查询PLC状态', '', 'active');
     try {
-        await api('/workpiecerecords/outbound', { method: 'POST', body: JSON.stringify({
-            recordId, operatorName: operator
+        const monitor = await api('/device/monitor');
+        const status = monitor.status?.state || 0;
+        if (status !== 1) {
+            const statusText = { 1: '空闲中', 2: '运行中', 3: '故障中', 4: '暂停中' };
+            updatePlcStep(1, `立库状态: ${statusText[status] || status}，无法出库`, 'error');
+            toast('❌ 立库状态异常，无法出库', 'error');
+            document.getElementById('plcTaskCloseBtn').classList.remove('hidden');
+            return;
+        }
+        updatePlcStep(1, '立库空闲中 ✅', 'done');
+
+        addPlcStep(2, '发送出库指令', `位置: ${row}排/${col}列/${level}层`, 'active');
+        const resp = await api('/device/outbound-task', { method: 'POST', body: JSON.stringify({
+            recordId: recordId,
+            operatorName: operator,
+            row: row, col: col, level: level
         })});
-        toast('✅ 出库成功', 'success');
-        document.getElementById('outboundSelectedCard').style.display = 'none';
-        selectedOutboundId = null;
-        await Promise.all([loadDashboard(), loadOutboundInventory()]);
-        loadOutboundRecent();
-    } catch(e) { toast('❌ 出库失败: ' + e.message, 'error'); }
+
+        if (resp.logs) resp.logs.forEach(l => addPlcLog(l));
+        if (resp.steps) {
+            resp.steps.forEach((s, i) => {
+                const status = s.name.includes('中断') || s.name.includes('失败') || s.name.includes('异常') ? 'error' : 'done';
+                const stepNum = i + 2;
+                if (document.getElementById(`plcStep_${stepNum}`)) {
+                    updatePlcStep(stepNum, s.detail || s.name, status);
+                } else {
+                    addPlcStep(stepNum, s.name, s.detail || '', status);
+                }
+            });
+        }
+
+        if (resp.success) {
+            document.getElementById('plcTaskProgress').style.width = '100%';
+            toast('✅ 出库成功', 'success');
+            document.getElementById('outboundSelectedCard').style.display = 'none';
+            selectedOutboundId = null;
+            await Promise.all([loadDashboard(), loadOutboundInventory()]);
+            loadOutboundRecent();
+        } else {
+            document.getElementById('plcTaskProgress').style.width = '100%';
+            document.getElementById('plcTaskProgress').style.background = 'var(--danger)';
+            toast('❌ ' + (resp.error || '出库失败'), 'error');
+        }
+    } catch(e) {
+        addPlcLog(`[${new Date().toLocaleTimeString()}] ❌ 异常: ${e.message}`);
+        toast('❌ 出库异常: ' + e.message, 'error');
+    }
+    document.getElementById('plcTaskCloseBtn').classList.remove('hidden');
 }
 
 async function loadOutboundRecent() {
@@ -645,6 +784,82 @@ async function deleteUser(id) {
 }
 
 function closeUserModal() { document.getElementById('userModal').classList.add('hidden'); }
+
+// ===== PLC任务执行 =====
+function showPlcTaskModal(title) {
+    document.getElementById('plcTaskTitle').textContent = title;
+    document.getElementById('plcTaskProgress').style.width = '0%';
+    document.getElementById('plcTaskSteps').innerHTML = '';
+    document.getElementById('plcTaskLogs').innerHTML = '';
+    document.getElementById('plcTaskCloseBtn').classList.add('hidden');
+    document.getElementById('plcTaskModal').classList.remove('hidden');
+}
+
+function addPlcStep(stepNum, name, detail, status) {
+    const icons = { done: '✅', active: '⏳', error: '❌', wait: '⏸️' };
+    const classes = { done: 'plc-step-done', active: 'plc-step-active', error: 'plc-step-error', wait: 'plc-step-wait' };
+    const container = document.getElementById('plcTaskSteps');
+    const div = document.createElement('div');
+    div.className = `plc-step ${classes[status] || 'plc-step-wait'}`;
+    div.id = `plcStep_${stepNum}`;
+    div.innerHTML = `<span class="plc-step-icon">${icons[status] || '⏸️'}</span><span>${name}${detail ? ' — ' + detail : ''}</span>`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function updatePlcStep(stepNum, detail, status) {
+    const icons = { done: '✅', active: '⏳', error: '❌', wait: '⏸️' };
+    const classes = { done: 'plc-step-done', active: 'plc-step-active', error: 'plc-step-error', wait: 'plc-step-wait' };
+    const el = document.getElementById(`plcStep_${stepNum}`);
+    if (el) {
+        el.className = `plc-step ${classes[status] || 'plc-step-wait'}`;
+        el.innerHTML = `<span class="plc-step-icon">${icons[status] || '⏸️'}</span><span>${el.textContent.replace(/^[✅⏳❌⏸️]\s*/, '')}${detail ? ' — ' + detail : ''}</span>`;
+    }
+}
+
+function addPlcLog(msg) {
+    const container = document.getElementById('plcTaskLogs');
+    container.innerHTML += `<div>${msg}</div>`;
+    container.scrollTop = container.scrollHeight;
+}
+
+function closePlcTaskModal() {
+    document.getElementById('plcTaskModal').classList.add('hidden');
+}
+
+async function executePlcTask(apiPath, title, steps, onSuccess) {
+    showPlcTaskModal(title);
+    steps.forEach((s, i) => addPlcStep(i + 1, s, '', 'wait'));
+    try {
+        updatePlcStep(1, '请求中...', 'active');
+        const resp = await api(apiPath, { method: 'POST', body: JSON.stringify(steps[steps.length - 1].payload || {}) });
+        // 显示返回的日志
+        if (resp.logs) resp.logs.forEach(l => addPlcLog(l));
+        // 更新步骤
+        if (resp.steps) {
+            resp.steps.forEach((s, i) => {
+                const status = s.name.includes('中断') || s.name.includes('失败') ? 'error' : 'done';
+                updatePlcStep(i + 1, s.detail || s.name, status);
+            });
+        }
+        if (resp.success) {
+            document.getElementById('plcTaskProgress').style.width = '100%';
+            toast('✅ ' + title + '成功', 'success');
+            if (onSuccess) await onSuccess(resp);
+        } else {
+            document.getElementById('plcTaskProgress').style.width = '100%';
+            document.getElementById('plcTaskProgress').style.background = 'var(--danger)';
+            toast('❌ ' + (resp.error || '任务失败'), 'error');
+        }
+    } catch (e) {
+        addPlcLog(`[${new Date().toLocaleTimeString()}] ❌ 请求异常: ${e.message}`);
+        updatePlcStep(1, e.message, 'error');
+        document.getElementById('plcTaskProgress').style.width = '100%';
+        document.getElementById('plcTaskProgress').style.background = 'var(--danger)';
+        toast('❌ 任务异常: ' + e.message, 'error');
+    }
+    document.getElementById('plcTaskCloseBtn').classList.remove('hidden');
+}
 
 // ===== 设备监控 =====
 let devMonitorTimer = null;

@@ -752,3 +752,12 @@
 [12:32:39.547] [ERROR] PLC 连接失败 192.168.1.88:502 - The operation was canceled.
 [12:35:45.483] [INFO] ModbusTcpClientService 初始化: 192.168.1.88:502 站号=1
 [12:56:29.854] [INFO] ModbusTcpClientService 初始化: 192.168.1.88:502 站号=1
+[13:52:11.502] [INFO] PLC 未连接，触发自动连接...
+[13:52:14.522] [ERROR] PLC 连接失败 192.168.1.88:502 - The operation was canceled.
+[14:25:31.469] [INFO] ModbusTcpClientService 初始化: 192.168.1.88:502 站号=1
+[14:25:47.636] [INFO] PLC 未连接，触发自动连接...
+[14:25:50.645] [ERROR] PLC 连接失败 192.168.1.88:502 - The operation was canceled.
+[14:27:41.555] [INFO] PLC 未连接，触发自动连接...
+[14:27:44.573] [ERROR] PLC 连接失败 192.168.1.88:502 - The operation was canceled.
+[14:39:03.109] [INFO] ModbusTcpClientService 初始化: 192.168.1.88:502 站号=1
+[14:40:48.078] [INFO] ModbusTcpClientService 初始化: 192.168.1.88:502 站号=1

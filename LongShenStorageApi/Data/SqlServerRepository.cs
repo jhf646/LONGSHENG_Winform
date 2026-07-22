@@ -14,6 +14,7 @@ public sealed class SqlServerRepository
         EnsureDatabase();
         EnsureTables();
         SeedDefaultAdmin();
+        EnsureBuiltInUser();
     }
 
     private void EnsureDatabase()
@@ -88,7 +89,22 @@ public sealed class SqlServerRepository
             CREATE TABLE DropdownOptions (Category NVARCHAR(50) NOT NULL, Value NVARCHAR(200) NOT NULL, PRIMARY KEY (Category, Value));
             -- 角色权限表
             IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='RolePermissions' AND xtype='U')
-            CREATE TABLE RolePermissions (RoleName NVARCHAR(50) NOT NULL, PageId NVARCHAR(50) NOT NULL, PRIMARY KEY (RoleName, PageId));";
+            CREATE TABLE RolePermissions (RoleName NVARCHAR(50) NOT NULL, PageId NVARCHAR(50) NOT NULL, PRIMARY KEY (RoleName, PageId));
+            -- 迁移旧格式库位编码 (1P-1C-1L → 1排-1列-1层)，仅当表中有旧格式数据时执行
+            IF EXISTS (SELECT * FROM StorageSlots WHERE SlotCode LIKE N'%P-%C-%L')
+            BEGIN
+                UPDATE StorageSlots SET SlotCode =
+                    CAST(RowNumber AS NVARCHAR) + N'排-' + CAST(ColumnNumber AS NVARCHAR) + N'列-' + CAST(LevelNumber AS NVARCHAR) + N'层'
+                WHERE SlotCode LIKE N'%P-%C-%L';
+                UPDATE r SET r.SlotCode = s.NewCode
+                FROM WorkpieceRecords r
+                INNER JOIN (SELECT SlotCode AS OldCode, CAST(RowNumber AS NVARCHAR) + N'排-' + CAST(ColumnNumber AS NVARCHAR) + N'列-' + CAST(LevelNumber AS NVARCHAR) + N'层' AS NewCode FROM StorageSlots) s
+                ON r.SlotCode = s.OldCode;
+                UPDATE e SET e.SlotCode = s.NewCode
+                FROM LedgerEntries e
+                INNER JOIN (SELECT SlotCode AS OldCode, CAST(RowNumber AS NVARCHAR) + N'排-' + CAST(ColumnNumber AS NVARCHAR) + N'列-' + CAST(LevelNumber AS NVARCHAR) + N'层' AS NewCode FROM StorageSlots) s
+                ON e.SlotCode = s.OldCode;
+            END";
         cmd.ExecuteNonQuery();
     }
 
@@ -591,7 +607,12 @@ public sealed class SqlServerRepository
             DisplayName = "查看员",
             IsActive = true
         });
-        // 内置超级管理员（固定ID，不可删除/修改）
+        return true;
+    }
+
+    /// <summary>确保内置超级管理员1001始终存在（独立于SeedDefaultAdmin，每次启动都会检查）</summary>
+    public void EnsureBuiltInUser()
+    {
         if (GetUserByUsername("1001") is null)
         {
             CreateUser(new User
@@ -604,7 +625,6 @@ public sealed class SqlServerRepository
                 IsActive = true
             });
         }
-        return true;
     }
 
     private static string BCryptHash(string password)

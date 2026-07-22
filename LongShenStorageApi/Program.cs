@@ -72,21 +72,28 @@ var app = builder.Build();
 
 app.UseCors();
 
-// 提供前端静态文件（Web文件夹在API项目上级目录）
-var webRoot = Path.Combine(Directory.GetCurrentDirectory(), "..", "LongShenStorageWeb");
-if (Directory.Exists(webRoot))
+// 提供前端静态文件（优先Web文件夹，其次wwwroot）
+var webPaths = new[]
 {
+    Path.Combine(Directory.GetCurrentDirectory(), "..", "LongShenStorageWeb"),
+    Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "LongShenStorageWeb"),
+    Path.Combine(Directory.GetCurrentDirectory(), "wwwroot")
+};
+var webRoot = webPaths.FirstOrDefault(Directory.Exists);
+if (webRoot is not null)
+{
+    Console.WriteLine($"Serving static files from: {webRoot}");
     app.UseDefaultFiles();
     app.UseStaticFiles(new StaticFileOptions
     {
         FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(webRoot),
         ServeUnknownFileTypes = true
     });
-    // 访问 / 时重定向到 index.html
     app.MapGet("/", () => Results.Redirect("/index.html"));
 }
 else
 {
+    Console.WriteLine("No static web root found, serving Swagger.");
     app.MapGet("/", () => Results.Redirect("/swagger"));
 }
 
