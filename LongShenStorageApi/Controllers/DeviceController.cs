@@ -187,8 +187,17 @@ public class DeviceController : ControllerBase
             }
 
             // 步骤2：发送PLC指令（入库动作码=3）
-            _logger.Info($"发送入库指令: D2022=100, D2023=3, D2024={request.Row}, D2025={request.Col}, D2026={request.Level}");
-            logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 发送入库指令 设备=100 动作=3 位置={request.Row}排/{request.Col}列/{request.Level}层");
+            // 第1排第1列特殊处理：层数-1发送给PLC
+            var sendLevel = request.Level;
+            var levelNote = "";
+            if (request.Row == 1 && request.Col == 1)
+            {
+                sendLevel = request.Level - 1;
+                levelNote = " (第1排第1列 层数特殊处理: " + request.Level + "→" + sendLevel + ")";
+                logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ⚠️ 第1排第1列 层数特殊处理: {request.Level}→{sendLevel}");
+            }
+            _logger.Info($"发送入库指令: D2022=100, D2023=3, D2024={request.Row}, D2025={request.Col}, D2026={sendLevel}{levelNote}");
+            logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 发送入库指令 设备=100 动作=3 位置={request.Row}排/{request.Col}列/{sendLevel}层{levelNote}");
             await _device.WriteHoldingRegisterAsync(2022, 100);
             logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 写入 D2022 = 100");
             await _device.WriteHoldingRegisterAsync(2023, 3);   // 入库=3
@@ -197,12 +206,12 @@ public class DeviceController : ControllerBase
             logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 写入 D2024 = {request.Row} (排)");
             await _device.WriteHoldingRegisterAsync(2025, (ushort)request.Col);
             logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 写入 D2025 = {request.Col} (列)");
-            await _device.WriteHoldingRegisterAsync(2026, (ushort)request.Level);
-            logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 写入 D2026 = {request.Level} (层)");
-            var writeRaw = $"写入 D2022=100, D2023=3, D2024={request.Row}, D2025={request.Col}, D2026={request.Level}";
-            _logger.Info($"入库指令发送成功: {writeRaw}");
-            logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ✅ 入库指令发送完成");
-            steps.Add(new { step = 2, name = "发送PLC指令", detail = $"设备=100 动作=3 位置={request.Row}/{request.Col}/{request.Level}", raw = writeRaw });
+            await _device.WriteHoldingRegisterAsync(2026, (ushort)sendLevel);
+            logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 写入 D2026 = {sendLevel} (层){levelNote}");
+            var writeRaw = $"写入 D2022=100, D2023=3, D2024={request.Row}, D2025={request.Col}, D2026={sendLevel}";
+            _logger.Info($"入库指令发送成功: {writeRaw}{levelNote}");
+            logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ✅ 入库指令发送完成{levelNote}");
+            steps.Add(new { step = 2, name = "发送PLC指令", detail = $"设备=100 动作=3 位置={request.Row}/{request.Col}/{sendLevel}{levelNote}", raw = writeRaw });
 
             // 等待3秒后检测PLC状态
             logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 等待3秒后检测PLC状态...");
@@ -339,8 +348,17 @@ public class DeviceController : ControllerBase
             }
 
             // 步骤2：发送PLC指令（出库动作码=2）
-            _logger.Info($"发送出库指令: D2022=100, D2023=2, D2024={request.Row}, D2025={request.Col}, D2026={request.Level}");
-            logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 发送出库指令 设备=100 动作=2 位置={request.Row}排/{request.Col}列/{request.Level}层");
+            // 第1排第1列特殊处理：层数-1发送给PLC
+            var sendLevel = request.Level;
+            var levelNote = "";
+            if (request.Row == 1 && request.Col == 1)
+            {
+                sendLevel = request.Level - 1;
+                levelNote = " (第1排第1列 层数特殊处理: " + request.Level + "→" + sendLevel + ")";
+                logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ⚠️ 第1排第1列 层数特殊处理: {request.Level}→{sendLevel}");
+            }
+            _logger.Info($"发送出库指令: D2022=100, D2023=2, D2024={request.Row}, D2025={request.Col}, D2026={sendLevel}{levelNote}");
+            logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 发送出库指令 设备=100 动作=2 位置={request.Row}排/{request.Col}列/{sendLevel}层{levelNote}");
             await _device.WriteHoldingRegisterAsync(2022, 100);
             logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 写入 D2022 = 100");
             await _device.WriteHoldingRegisterAsync(2023, 2);   // 出库=2
@@ -349,12 +367,12 @@ public class DeviceController : ControllerBase
             logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 写入 D2024 = {request.Row} (排)");
             await _device.WriteHoldingRegisterAsync(2025, (ushort)request.Col);
             logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 写入 D2025 = {request.Col} (列)");
-            await _device.WriteHoldingRegisterAsync(2026, (ushort)request.Level);
-            logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 写入 D2026 = {request.Level} (层)");
-            var writeRaw = $"写入 D2022=100, D2023=2, D2024={request.Row}, D2025={request.Col}, D2026={request.Level}";
-            _logger.Info($"出库指令发送成功: {writeRaw}");
-            logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ✅ 出库指令发送完成");
-            steps.Add(new { step = 2, name = "发送PLC指令", detail = $"设备=100 动作=2 位置={request.Row}/{request.Col}/{request.Level}", raw = writeRaw });
+            await _device.WriteHoldingRegisterAsync(2026, (ushort)sendLevel);
+            logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 写入 D2026 = {sendLevel} (层){levelNote}");
+            var writeRaw = $"写入 D2022=100, D2023=2, D2024={request.Row}, D2025={request.Col}, D2026={sendLevel}";
+            _logger.Info($"出库指令发送成功: {writeRaw}{levelNote}");
+            logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ✅ 出库指令发送完成{levelNote}");
+            steps.Add(new { step = 2, name = "发送PLC指令", detail = $"设备=100 动作=2 位置={request.Row}/{request.Col}/{sendLevel}{levelNote}", raw = writeRaw });
 
             // 等待3秒后检测PLC状态
             logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 等待3秒后检测PLC状态...");
