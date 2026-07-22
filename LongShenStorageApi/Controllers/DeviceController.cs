@@ -119,15 +119,15 @@ public class DeviceController : ControllerBase
             var data = new Dictionary<string, object>
             {
                 ["deviceNo"] = V(0),
-                ["status"] = new { state = V(1), errorCode = V(2), mode = V(3), step = V(4) },
+                ["status"] = new { state = V(1), errorCode = V(2), errorCodeLow = V(3), mode = V(4), step = V(5) },
                 ["flags"] = new
                 {
-                    taskDone = V(5), transferState = V(6), spare = V(7),
-                    leftIn = V(13), leftOut = V(14), rightIn = V(15),
-                    rightOut = V(16), actionDone = V(17), carrierPos = V(18)
+                    taskDone = V(6), transferState = V(7), spare = V(8),
+                    leftIn = V(14), leftOut = V(15), rightIn = V(16),
+                    rightOut = V(17), actionDone = V(18), carrierPos = V(19)
                 },
-                ["position"] = new { x = V(8), y = V(9), zDeep = V(10), zShallow = V(11) },
-                ["canMove"] = V(12),
+                ["position"] = new { x = V(9), y = V(10), zDeep = V(11), zShallow = V(12) },
+                ["canMove"] = V(13),
                 ["connected"] = _device.IsConnected,
                 ["configName"] = _config.GetConfig().DeviceName,
                 ["command"] = new
@@ -227,10 +227,10 @@ public class DeviceController : ControllerBase
                 return Ok(new { success = false, error = errMsg, steps, logs = logEntries });
             }
 
-            // 步骤3：等待任务完成（检测4009回到1）
+            // 步骤3：等待任务完成（检测4009=1 且 4014=1）
             _logger.Info("等待任务完成...");
             logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 等待任务完成...");
-            steps.Add(new { step = 3, name = "等待任务完成", detail = "检测立库状态回到空闲", raw = "" });
+            steps.Add(new { step = 3, name = "等待任务完成", detail = "检测4009=1 且 4014=1", raw = "" });
 
             var maxWait = 60; // 最多等待60秒
             for (var i = 0; i < maxWait; i++)
@@ -251,11 +251,24 @@ public class DeviceController : ControllerBase
 
                 if (status == 1)
                 {
-                    _logger.Info("✅ 任务执行成功，立库回到空闲状态");
-                    logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ✅ 任务执行成功");
-                    steps.Add(new { step = 4, name = "任务完成", detail = "立库回到空闲状态", raw = $"D4009 = {status} (等待{i + 1}秒)" });
-                    success = true;
-                    break;
+                    // 额外验证：4014(任务完成)=1
+                    var taskDone = await _device.ReadHoldingRegisterAsync(4014);
+                    _logger.Info($"验证 D4014(任务完成)={taskDone}");
+                    logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 验证 D4014(任务完成)={taskDone}");
+
+                    if (taskDone == 1)
+                    {
+                        _logger.Info("✅ 任务执行成功 (4009=1, 4014=1)");
+                        logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ✅ 任务执行成功");
+                        steps.Add(new { step = 4, name = "任务完成", detail = "4009=1 4014=1", raw = $"D4009={status} D4014={taskDone} (等待{i + 1}秒)" });
+                        success = true;
+                        break;
+                    }
+                    else
+                    {
+                        _logger.Warn($"条件未满足: 4009=1 但 4014={taskDone}，继续等待...");
+                        logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ⚠️ 条件未满足: 4014={taskDone}，继续等待...");
+                    }
                 }
             }
 
@@ -388,10 +401,10 @@ public class DeviceController : ControllerBase
                 return Ok(new { success = false, error = errMsg, steps, logs = logEntries });
             }
 
-            // 步骤3：等待任务完成
+            // 步骤3：等待任务完成（检测4009=1 且 4014=1）
             _logger.Info("等待任务完成...");
             logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 等待任务完成...");
-            steps.Add(new { step = 3, name = "等待任务完成", detail = "检测立库状态回到空闲", raw = "" });
+            steps.Add(new { step = 3, name = "等待任务完成", detail = "检测4009=1 且 4014=1", raw = "" });
 
             var maxWait = 60;
             for (var i = 0; i < maxWait; i++)
@@ -411,11 +424,24 @@ public class DeviceController : ControllerBase
 
                 if (status == 1)
                 {
-                    _logger.Info("✅ 任务执行成功，立库回到空闲状态");
-                    logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ✅ 任务执行成功");
-                    steps.Add(new { step = 4, name = "任务完成", detail = "立库回到空闲状态", raw = $"D4009 = {status} (等待{i + 1}秒)" });
-                    success = true;
-                    break;
+                    // 额外验证：4014(任务完成)=1
+                    var taskDone = await _device.ReadHoldingRegisterAsync(4014);
+                    _logger.Info($"验证 D4014(任务完成)={taskDone}");
+                    logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 验证 D4014(任务完成)={taskDone}");
+
+                    if (taskDone == 1)
+                    {
+                        _logger.Info("✅ 任务执行成功 (4009=1, 4014=1)");
+                        logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ✅ 任务执行成功");
+                        steps.Add(new { step = 4, name = "任务完成", detail = "4009=1 4014=1", raw = $"D4009={status} D4014={taskDone} (等待{i + 1}秒)" });
+                        success = true;
+                        break;
+                    }
+                    else
+                    {
+                        _logger.Warn($"条件未满足: 4009=1 但 4014={taskDone}，继续等待...");
+                        logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ⚠️ 条件未满足: 4014={taskDone}，继续等待...");
+                    }
                 }
             }
 
