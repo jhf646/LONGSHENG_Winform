@@ -344,7 +344,7 @@ public sealed class SqlServerRepository
     public WorkpieceRecord? Inbound(InboundRequest request)
     {
         var state = Load();
-        var targetSlot = ResolveTargetSlot(state, request.SpecifiedSlot);
+        var targetSlot = ResolveTargetSlot(state, request.SpecifiedSlot, request.PalletNumber);
         if (targetSlot is null) return null;
 
         var record = new WorkpieceRecord
@@ -422,11 +422,27 @@ public sealed class SqlServerRepository
         return true;
     }
 
-    private static StorageSlot? ResolveTargetSlot(AppState state, string? specifiedSlot)
+    private static StorageSlot? ResolveTargetSlot(AppState state, string? specifiedSlot, string? palletNumber)
     {
+        // 1. 如果指定了货位，使用指定货位
         if (!string.IsNullOrWhiteSpace(specifiedSlot))
             return state.Slots.FirstOrDefault(s => s.SlotCode.Equals(specifiedSlot, StringComparison.OrdinalIgnoreCase) && !s.IsOccupied);
-        return state.Slots.FirstOrDefault(s => !s.IsOccupied);
+
+        // 2. 根据托盘号提取数字，匹配内部编号库位（T10 → 内部编号10）
+        if (!string.IsNullOrWhiteSpace(palletNumber))
+        {
+            var numStr = new string(palletNumber.Where(char.IsDigit).ToArray());
+            if (int.TryParse(numStr, out var palletNum) && palletNum > 0)
+            {
+                var matchedSlot = state.Slots.FirstOrDefault(s =>
+                    s.InternalNumber == palletNum && !s.IsOccupied && s.IsEnabled);
+                if (matchedSlot != null)
+                    return matchedSlot;
+            }
+        }
+
+        // 3. 回退：找第一个空闲且启用的库位
+        return state.Slots.FirstOrDefault(s => !s.IsOccupied && s.IsEnabled);
     }
 
     private static AppState CreateDefaultState()
