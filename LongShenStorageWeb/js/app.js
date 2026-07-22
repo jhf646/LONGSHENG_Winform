@@ -610,8 +610,9 @@ async function loadDeviceMonitor() {
             {a:4020,n:'可移库',v:pos.zShallow,d:'1可 2不可'},{a:4021,n:'左入可入库',v:fl.leftIn,d:'1可 2不可'},
             {a:4022,n:'左出可出库',v:fl.leftOut,d:'1可 2不可'},{a:4023,n:'右入可入库',v:fl.rightIn,d:'1可 2不可'},
             {a:4024,n:'右出可出库',v:fl.rightOut,d:'1可 2不可'},{a:4025,n:'A→B完成',v:fl.actionDone,d:'0/1'},
-            {a:4026,n:'堆垛车位置',v:fl.carrierPos,d:'车位号'},{a:4101,n:'设备序号',v:cmd.deviceNo,d:'写入区'},
-            {a:4102,n:'动作序列/标志',v:cmd.seqNo,d:'写入区'},{a:4111,n:'动作类型',v:cmd.actionType,d:'1默认 2出库 3入库'}
+            {a:4026,n:'堆垛车位置',v:fl.carrierPos,d:'车位号'},{a:2022,n:'设备序号',v:current.deviceNo ?? 0,d:'写入区'},
+            {a:2023,n:'动作序列/标志',v:cmd.seqNo,d:'写入区'},{a:2024,n:'排',v:cmd.row ?? 0,d:'写入区'},
+            {a:2025,n:'列',v:cmd.col ?? 0,d:'写入区'},{a:2026,n:'层',v:cmd.level ?? 0,d:'写入区'}
         ];
         document.getElementById('devRegisterTable').innerHTML = allRegs.map(r =>
             `<tr><td>D${r.a}</td><td>${r.n}</td><td style="font-weight:bold;font-size:14px">${r.v}</td><td style="color:var(--text-secondary);font-size:12px">${r.d}</td></tr>`
@@ -646,7 +647,7 @@ async function loadDeviceRegisters() {
 }
 
 function getCmdKey(addr) {
-    const map = {4101:'deviceNo',4102:'seqNo',4103:'aRow',4104:'aCol',4105:'aLevel',4106:'bRow',4107:'bCol',4108:'bLevel',4109:'param1',4110:'param2',4111:'actionType'};
+    const map = {2022:'deviceNo',2023:'seqNo',2024:'row',2025:'col',2026:'level'};
     return map[addr] || '';
 }
 
@@ -655,11 +656,7 @@ async function sendDeviceCommand() {
         deviceNo: parseInt(document.getElementById('cmdDeviceNo').value) || 1,
         fromRow: parseInt(document.getElementById('cmdFromRow').value) || 1,
         fromCol: parseInt(document.getElementById('cmdFromCol').value) || 1,
-        fromLevel: parseInt(document.getElementById('cmdFromLevel').value) || 1,
-        toRow: parseInt(document.getElementById('cmdToRow').value) || 1,
-        toCol: parseInt(document.getElementById('cmdToCol').value) || 1,
-        toLevel: parseInt(document.getElementById('cmdToLevel').value) || 1,
-        actionType: parseInt(document.getElementById('cmdActionType').value) || 1
+        fromLevel: parseInt(document.getElementById('cmdFromLevel').value) || 1
     };
 
     try {

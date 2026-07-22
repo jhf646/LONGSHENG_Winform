@@ -126,10 +126,8 @@ public class DeviceController : ControllerBase
                 ["configName"] = _config.GetConfig().DeviceName,
                 ["command"] = new
                 {
-                    deviceNo = 0, seqNo = 0, actionFlag = 0,
-                    aRow = 0, aCol = 0, aLevel = 0,
-                    bRow = 0, bCol = 0, bLevel = 0,
-                    param1 = 0, param2 = 0, actionType = 0
+                    deviceNo = 0, seqNo = 0,
+                    row = 0, col = 0, level = 0
                 }
             };
             return Ok(data);
@@ -158,17 +156,14 @@ public class DeviceController : ControllerBase
     [HttpPost("command")]
     public async Task<IActionResult> SendCommand([FromBody] DeviceCommand cmd)
     {
-        await _device.WriteHoldingRegisterAsync(4101, (ushort)cmd.DeviceNo);
-        await _device.WriteHoldingRegisterAsync(4102, 1); // 动作序列+标志位(合并)
-        await _device.WriteHoldingRegisterAsync(4103, (ushort)cmd.FromRow);
-        await _device.WriteHoldingRegisterAsync(4104, (ushort)cmd.FromCol);
-        await _device.WriteHoldingRegisterAsync(4105, (ushort)cmd.FromLevel);
-        await _device.WriteHoldingRegisterAsync(4106, (ushort)cmd.ToRow);
-        await _device.WriteHoldingRegisterAsync(4107, (ushort)cmd.ToCol);
-        await _device.WriteHoldingRegisterAsync(4108, (ushort)cmd.ToLevel);
-        await _device.WriteHoldingRegisterAsync(4111, (ushort)cmd.ActionType);
+        // 实际PLC写入地址 2022~2029，不分出入库，位置统一用排/列/层
+        await _device.WriteHoldingRegisterAsync(2022, (ushort)cmd.DeviceNo);
+        await _device.WriteHoldingRegisterAsync(2023, 1); // 动作序列+标志位
+        await _device.WriteHoldingRegisterAsync(2024, (ushort)cmd.FromRow);  // 排
+        await _device.WriteHoldingRegisterAsync(2025, (ushort)cmd.FromCol);  // 列
+        await _device.WriteHoldingRegisterAsync(2026, (ushort)cmd.FromLevel); // 层
 
-        return Ok(new { message = $"指令已发送: {cmd.ActionType} | A({cmd.FromRow},{cmd.FromCol},{cmd.FromLevel}) → B({cmd.ToRow},{cmd.ToCol},{cmd.ToLevel})" });
+        return Ok(new { message = $"指令已发送: 位置({cmd.FromRow}排/{cmd.FromCol}列/{cmd.FromLevel}层)" });
     }
 }
 
@@ -184,8 +179,4 @@ public sealed class DeviceCommand
     public int FromRow { get; set; }
     public int FromCol { get; set; }
     public int FromLevel { get; set; }
-    public int ToRow { get; set; }
-    public int ToCol { get; set; }
-    public int ToLevel { get; set; }
-    public int ActionType { get; set; } = 1;
 }

@@ -310,26 +310,26 @@
       <div class="card"><div class="card-header">🎮 设备指令 <span style="font-weight:normal;font-size:12px;color:var(--text-secondary)">写入D区寄存器</span></div>
         <div class="card-body">
           <div style="padding:12px;background:#fef3e8;border-radius:6px;font-size:13px;color:#b06823;margin-bottom:16px">
-            ⚠️ 设置A/B点参数后点击"发送指令"，模拟器将执行从A点到B点的搬运动作。
+            ⚠️ 设置目标货位参数后点击"发送指令"。
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
             <div style="padding:16px;background:#f0f4f8;border-radius:8px">
-              <div style="font-size:13px;font-weight:bold;margin-bottom:8px">🅰️ A点（取货位）</div>
+              <div style="font-size:13px;font-weight:bold;margin-bottom:8px">🎯 目标货位</div>
+              <div class="form-group" style="margin-bottom:6px"><label style="font-size:12px">设备序号</label><input type="number" id="cmdDeviceNo" value="1" min="1"></div>
               <div class="form-group" style="margin-bottom:6px"><label style="font-size:12px">排</label><input type="number" id="cmdFromRow" value="1" min="1" max="2"></div>
               <div class="form-group" style="margin-bottom:6px"><label style="font-size:12px">列</label><input type="number" id="cmdFromCol" value="1" min="1" max="4"></div>
               <div class="form-group"><label style="font-size:12px">层</label><input type="number" id="cmdFromLevel" value="1" min="1" max="8"></div>
             </div>
             <div style="padding:16px;background:#f0f4f8;border-radius:8px">
-              <div style="font-size:13px;font-weight:bold;margin-bottom:8px">🅱️ B点（放货位）</div>
-              <div class="form-group" style="margin-bottom:6px"><label style="font-size:12px">排</label><input type="number" id="cmdToRow" value="2" min="1" max="2"></div>
-              <div class="form-group" style="margin-bottom:6px"><label style="font-size:12px">列</label><input type="number" id="cmdToCol" value="4" min="1" max="4"></div>
-              <div class="form-group"><label style="font-size:12px">层</label><input type="number" id="cmdToLevel" value="8" min="1" max="8"></div>
-            </div>
-            <div style="padding:16px;background:#f0f4f8;border-radius:8px">
-              <div style="font-size:13px;font-weight:bold;margin-bottom:8px">⚙️ 参数</div>
-              <div class="form-group" style="margin-bottom:6px"><label style="font-size:12px">动作类型</label><select id="cmdActionType"><option value="1">默认</option><option value="2">出库</option><option value="3">入库</option><option value="4">移库</option><option value="5">直接出</option></select></div>
-              <div class="form-group" style="margin-bottom:6px"><label style="font-size:12px">设备序号</label><input type="number" id="cmdDeviceNo" value="1" min="1"></div>
+              <div style="font-size:13px;font-weight:bold;margin-bottom:8px">⚙️ 信息</div>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:8px">
+                <p>不分出入库，只需设置目标位置。</p>
+                <p style="margin-top:8px">指令将写入：</p>
+                <p>D2022 = 设备序号</p>
+                <p>D2023 = 动作标志</p>
+                <p>D2024~2026 = 排/列/层</p>
+              </div>
             </div>
           </div>
 

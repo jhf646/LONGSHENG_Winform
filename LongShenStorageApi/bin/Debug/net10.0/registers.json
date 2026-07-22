@@ -31,20 +31,13 @@
   ],
 
   "writeRegisters": [
-    { "address": 4101, "name": "设备序号", "description": "堆垛机设备编号(1~N)", "unit": "" },
-    { "address": 4102, "name": "动作序列/标志位", "description": "动作序列号每次递增；写入此位触发执行(1:有动作)", "unit": "" },
-    { "address": 4103, "name": "A:排", "description": "11:入库位置 12:出库位置", "unit": "" },
-    { "address": 4104, "name": "A:列", "description": "取货位列号(1-4)", "unit": "" },
-    { "address": 4105, "name": "A:层", "description": "取货位层号(1-8)", "unit": "" },
-    { "address": 4106, "name": "B:排", "description": "放货位排号", "unit": "" },
-    { "address": 4107, "name": "B:列", "description": "放货位列号(1-4)", "unit": "" },
-    { "address": 4108, "name": "B:层", "description": "放货位层号(1-8)", "unit": "" },
-    { "address": 4109, "name": "附加参数1", "description": "扩展参数", "unit": "" },
-    { "address": 4110, "name": "附加参数2", "description": "扩展参数", "unit": "" },
-    { "address": 4111, "name": "动作类型", "description": "1:默认无动作 2:出库 3:入库 4:移库 5:直接出", "unit": "" },
-    { "address": 4112, "name": "出库后续动作", "description": "1:默认无动作 11:线体1号位 12:线体2号位", "unit": "" },
-    { "address": 4113, "name": "起始地址", "description": "", "unit": "" },
-    { "address": 4114, "name": "目标地址", "description": "", "unit": "" },
-    { "address": 4115, "name": "其他参数", "description": "", "unit": "" }
+    { "address": 2022, "name": "设备序号", "description": "堆垛机设备编号(1~N)", "unit": "" },
+    { "address": 2023, "name": "动作序列/标志位", "description": "动作序列号每次递增；写入此位触发执行(1:有动作)", "unit": "" },
+    { "address": 2024, "name": "排", "description": "货位排号", "unit": "" },
+    { "address": 2025, "name": "列", "description": "货位列号(1-4)", "unit": "" },
+    { "address": 2026, "name": "层", "description": "货位层号(1-8)", "unit": "" },
+    { "address": 2027, "name": "预留1", "description": "", "unit": "" },
+    { "address": 2028, "name": "预留2", "description": "", "unit": "" },
+    { "address": 2029, "name": "预留3", "description": "", "unit": "" }
   ]
 }
