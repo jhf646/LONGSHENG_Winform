@@ -34,11 +34,17 @@ public class AppStateController : ControllerBase
         var alert = inventoryCount < state.AlertSettings.MinThreshold || inventoryCount > state.AlertSettings.MaxThreshold;
         var alertText = inventoryCount < state.AlertSettings.MinThreshold ? "低于下限" : inventoryCount > state.AlertSettings.MaxThreshold ? "高于上限" : "正常";
 
+        var today = DateTime.Today;
+        var todayInbound = state.Ledger.Count(e => e.Type == TransactionType.Inbound && e.Timestamp >= today);
+        var todayOutbound = state.Ledger.Count(e => e.Type == TransactionType.Outbound && e.Timestamp >= today);
+
         return Ok(new DashboardData
         {
             InventoryCount = inventoryCount,
             OccupiedSlots = occupied,
             FreeSlots = free,
+            TodayInbound = todayInbound,
+            TodayOutbound = todayOutbound,
             AlertStatus = alertText,
             IsAlert = alert,
             Slots = state.Slots,

@@ -99,6 +99,8 @@ public sealed class DashboardData
     public int InventoryCount { get; set; }
     public int OccupiedSlots { get; set; }
     public int FreeSlots { get; set; }
+    public int TodayInbound { get; set; }
+    public int TodayOutbound { get; set; }
     public string AlertStatus { get; set; } = "正常";
     public bool IsAlert { get; set; }
     public List<StorageSlot> Slots { get; set; } = new();

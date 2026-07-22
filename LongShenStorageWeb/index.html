@@ -84,10 +84,11 @@
     <!-- 仪表盘 -->
     <div class="page active" id="page-dashboard">
       <div class="metrics" id="metricsContainer">
-        <div class="metric-card"><div class="metric-icon" style="background:#e8f0fe">📦</div><div><div class="metric-value" id="metricCount">0</div><div class="metric-label">库存数量</div></div></div>
-        <div class="metric-card"><div class="metric-icon" style="background:#fef3e8">🔴</div><div><div class="metric-value" id="metricOccupied">0</div><div class="metric-label">占用库位</div></div></div>
-        <div class="metric-card"><div class="metric-icon" style="background:#e8f8f0">🟢</div><div><div class="metric-value" id="metricFree">0</div><div class="metric-label">空闲库位</div></div></div>
-        <div class="metric-card"><div class="metric-icon" style="background:#fef3e8">⚠️</div><div><div class="metric-value" id="metricAlert">正常</div><div class="metric-label">库存预警</div></div></div>
+        <div class="metric-card"><div class="metric-icon" style="background:#e8f0fe;font-size:20px">📥</div><div><div class="metric-value" id="metricTodayIn">0</div><div class="metric-label">今日入库</div></div></div>
+        <div class="metric-card"><div class="metric-icon" style="background:#fef3e8;font-size:20px">📤</div><div><div class="metric-value" id="metricTodayOut">0</div><div class="metric-label">今日出库</div></div></div>
+        <div class="metric-card"><div class="metric-icon" style="background:#fde8e8;font-size:20px">🔴</div><div><div class="metric-value" id="metricOccupied">0</div><div class="metric-label">占用库位</div></div></div>
+        <div class="metric-card"><div class="metric-icon" style="background:#e8f8f0;font-size:20px">🟢</div><div><div class="metric-value" id="metricFree">0</div><div class="metric-label">空闲库位</div></div></div>
+        <div class="metric-card"><div class="metric-icon" style="background:#fef3e8;font-size:20px">⚠️</div><div><div class="metric-value" id="metricAlert">正常</div><div class="metric-label">库存预警</div></div></div>
       </div>
       <div class="card"><div class="card-header">🗄️ 库位可视化</div>
         <div class="card-body"><div class="legend"><div class="legend-item"><div class="legend-swatch" style="background:#eafaf1"></div>空闲</div><div class="legend-item"><div class="legend-swatch" style="background:#fde8e8"></div>占用</div></div><div class="slot-visual" id="dashboardSlots"></div></div>

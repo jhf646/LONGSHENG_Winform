@@ -150,13 +150,14 @@ async function loadDropdowns() {
 async function loadDashboard() {
     try {
         const data = await api('/appstate/dashboard');
-        document.getElementById('metricCount').textContent = data.inventoryCount;
+        document.getElementById('metricTodayIn').textContent = data.todayInbound;
+        document.getElementById('metricTodayOut').textContent = data.todayOutbound;
         document.getElementById('metricOccupied').textContent = data.occupiedSlots;
         document.getElementById('metricFree').textContent = data.freeSlots;
         const alertEl = document.getElementById('metricAlert');
         alertEl.textContent = data.alertStatus;
         alertEl.style.color = data.isAlert ? '#d92d20' : '#1d2939';
-        document.getElementById('headerStatus').textContent = `📊 ${data.inventoryCount}件 · 🟠${data.occupiedSlots}占用 · 🟢${data.freeSlots}空闲 · ${data.isAlert ? '⚠️' : '✅'}${data.alertStatus}`;
+        document.getElementById('headerStatus').textContent = `📥${data.todayInbound}入 · 📤${data.todayOutbound}出 · 🟠${data.occupiedSlots}占用 · 🟢${data.freeSlots}空闲 · ${data.isAlert ? '⚠️' : '✅'}${data.alertStatus}`;
         renderSlotVisual('dashboardSlots', data.slots);
         const tbody = document.getElementById('recentBody');
         tbody.innerHTML = (data.recentInventory || []).slice(0,10).map(r =>
