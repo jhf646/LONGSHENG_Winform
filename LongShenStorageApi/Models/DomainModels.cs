@@ -189,6 +189,7 @@ public sealed class LoginResponse
     public string DisplayName { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
     public Guid UserId { get; set; }
+    public List<string> AllowedPages { get; set; } = new();
 }
 
 public sealed class CreateUserRequest
@@ -218,6 +219,9 @@ public sealed class PasswordResetRequest
 /// </summary>
 public static class AppPages
 {
+    /// <summary>内置超级管理员账号1001的固定ID</summary>
+    public static readonly Guid BuiltInUserId = Guid.Parse("10000000-0000-0000-0000-000000000001");
+
     public const string Dashboard = "dashboard";
     public const string Inbound = "inbound";
     public const string Outbound = "outbound";
@@ -226,6 +230,9 @@ public static class AppPages
     public const string Report = "report";
     public const string Alert = "alert";
     public const string Users = "users";
+    public const string DevMonitor = "devmonitor";
+    public const string DevControl = "devcontrol";
+    public const string Roles = "roles";
 
     public static readonly Dictionary<string, string> PageNames = new()
     {
@@ -236,14 +243,17 @@ public static class AppPages
         { Ledger, "台账查询" },
         { Report, "报表统计" },
         { Alert, "库存预警" },
-        { Users, "用户管理" }
+        { Users, "用户管理" },
+        { DevMonitor, "设备监控" },
+        { DevControl, "设备调用" },
+        { Roles, "角色权限" }
     };
 
     /// <summary>获取某个角色默认允许的页面</summary>
     public static List<string> GetDefaultPages(UserRole role) => role switch
     {
-        UserRole.Admin => new List<string> { Dashboard, Inbound, Outbound, Slots, Ledger, Report, Alert, Users },
-        UserRole.Operator => new List<string> { Dashboard, Inbound, Outbound, Slots, Ledger, Report, Alert },
+        UserRole.Admin => new List<string> { Dashboard, Inbound, Outbound, Slots, Ledger, Report, Alert, Users, DevMonitor, DevControl, Roles },
+        UserRole.Operator => new List<string> { Dashboard, Inbound, Outbound, Slots, Ledger, Report, Alert, DevMonitor, DevControl },
         UserRole.Viewer => new List<string> { Dashboard, Slots, Ledger, Report },
         _ => new List<string> { Dashboard }
     };

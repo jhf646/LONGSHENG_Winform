@@ -3,6 +3,9 @@ const API_BASE = 'http://localhost:5000/api';
 let authToken = localStorage.getItem('ls_token') || '';
 let currentUser = JSON.parse(localStorage.getItem('ls_user') || 'null');
 
+// 内置超级管理员账号1001的固定ID（不可删除/修改）
+const BUILT_IN_USER_ID = '10000000-0000-0000-0000-000000000001';
+
 // ===== 工具 =====
 async function api(path, options = {}) {
     const headers = { 'Content-Type': 'application/json' };
@@ -65,10 +68,25 @@ function applyPagePermissions() {
     const canWrite = hasRole('Admin', 'Operator');
     document.querySelectorAll('.perm-admin').forEach(el => el.classList.toggle('hidden', !isAdmin));
     document.querySelectorAll('.perm-write').forEach(el => el.classList.toggle('hidden', !canWrite));
+    // 根据角色权限动态控制菜单显示
+    if (currentUser && currentUser.allowedPages && currentUser.allowedPages.length > 0) {
+        document.querySelectorAll('.nav-item').forEach(el => {
+            const page = el.dataset.page;
+            if (page && !currentUser.allowedPages.includes(page)) {
+                el.classList.add('hidden');
+            }
+        });
+    }
 }
 
 // ===== 页面导航 =====
 async function switchPage(pageId) {
+    // 检查页面权限
+    if (currentUser && currentUser.allowedPages && currentUser.allowedPages.length > 0 && !currentUser.allowedPages.includes(pageId)) {
+        toast('无权限访问此页面', 'error');
+        switchPage('dashboard');
+        return;
+    }
     document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === pageId));
     document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === `page-${pageId}`));
     const titles = { dashboard: '仪表盘', inbound: '入库管理', outbound: '出库管理', slots: '货位管理', ledger: '台账查询', report: '报表统计', users: '用户管理', alert: '库存预警', roles: '角色权限', devmonitor: '设备监控', devcontrol: '设备调用' };
@@ -170,8 +188,8 @@ function renderSlotVisual(containerId, slots) {
                         ? `<div class="slot-status" style="font-size:9px;color:#667085">🚪总出入口</div>`
                         : isDisabled
                         ? `<div class="slot-status" style="font-size:9px;color:#999">⚪禁用</div>`
-                        : `<div class="slot-status">${slot.isOccupied ? '🔴占用' : '🟢空闲'}</div>`;
-                    cell.title = `${slot.slotCode} (内部编号: ${slot.internalNumber})${isDisabled ? ' [已禁用]' : ''}`;
+                        : `<div class="slot-status">${slot.isOccupied ? '🔴占用' : `🟢空闲 ${String(slot.internalNumber).padStart(3, '0')}`}</div>`;
+                    cell.title = `${slot.slotCode} (内部编号: ${String(slot.internalNumber).padStart(3, '0')})${isDisabled ? ' [已禁用]' : ''}`;
                     cell.onclick = () => handleSlotClick(slot);
                 }
                 grid.appendChild(cell);
@@ -290,7 +308,7 @@ async function showSlotDetail(slot) {
             <div style="text-align:center;margin-bottom:20px">
                 <div style="font-size:40px;margin-bottom:8px">${isDisabled ? '⚪' : (isFree ? '🟢' : '🔴')}</div>
                 <div style="font-size:18px;font-weight:bold;color:#1d2939">${slot.slotCode}</div>
-                <div style="font-size:13px;color:#98a2b3;margin-top:2px">${slot.zone} · ${slot.rowNumber}排${slot.columnNumber}列${slot.levelNumber}层 · 内部编号: ${slot.internalNumber || '-'} ${isDisabled ? '· ⚪已禁用' : ''}</div>
+                <div style="font-size:13px;color:#98a2b3;margin-top:2px">${slot.zone} · ${slot.rowNumber}排${slot.columnNumber}列${slot.levelNumber}层 · 内部编号: ${String(slot.internalNumber).padStart(3, '0')} ${isDisabled ? '· ⚪已禁用' : ''}</div>
             </div>
             <div style="border-top:1px solid #e8ecf0;padding-top:16px">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:13px">
@@ -389,7 +407,7 @@ async function loadSlotPage() {
             const statusText = isDisabled ? '禁用' : (s.isOccupied ? '占用' : '空闲');
             const statusKey = isDisabled ? 'disabled' : (s.isOccupied ? 'occupied' : 'free');
             return `<tr data-status="${statusKey}">
-                <td>${s.internalNumber || '-'}</td>
+                <td>${String(s.internalNumber).padStart(3, '0')}</td>
                 <td>${s.slotCode}</td>
                 <td><span class="badge ${isDisabled ? 'badge-viewer' : (s.isOccupied ? 'badge-inactive' : 'badge-active')}">${statusText}</span></td>
                 <td>${s.rowNumber}排/${s.columnNumber}列/${s.levelNumber}层</td>
@@ -487,8 +505,9 @@ async function loadUserList() {
                 <td><span class="badge ${u.isActive ? 'badge-active' : 'badge-inactive'}">${u.isActive ? '启用' : '停用'}</span></td>
                 <td>${formatTime(u.createdAt)}</td>
                 <td>
-                    <button class="btn btn-sm btn-warning" onclick="editUser('${u.id}','${encodeURIComponent(u.username)}','${encodeURIComponent(u.displayName)}','${u.role}','${u.isActive}')">✏️ 编辑</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}')">🗑️ 删除</button>
+                    ${u.id === BUILT_IN_USER_ID ? '<span style="color:#98a2b3;font-size:12px">🔒 内置账号</span>' :
+                        `<button class="btn btn-sm btn-warning" onclick="editUser('${u.id}','${encodeURIComponent(u.username)}','${encodeURIComponent(u.displayName)}','${u.role}','${u.isActive}')">✏️ 编辑</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}')">🗑️ 删除</button>`}
                 </td>
             </tr>
         `).join('');
@@ -752,8 +771,8 @@ async function saveRolePermissions(role) {
 }
 
 async function resetRolePermissions(role) {
-    const defaults = { Admin: ['dashboard','inbound','outbound','slots','ledger','report','alert','users'],
-        Operator: ['dashboard','inbound','outbound','slots','ledger','report','alert'],
+    const defaults = { Admin: ['dashboard','inbound','outbound','slots','ledger','report','alert','users','devmonitor','devcontrol','roles'],
+        Operator: ['dashboard','inbound','outbound','slots','ledger','report','alert','devmonitor','devcontrol'],
         Viewer: ['dashboard','slots','ledger','report'] };
     rolePermissionCache[role] = defaults[role] || [];
     await loadRolePage();

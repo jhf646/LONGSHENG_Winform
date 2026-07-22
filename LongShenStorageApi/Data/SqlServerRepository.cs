@@ -591,6 +591,19 @@ public sealed class SqlServerRepository
             DisplayName = "查看员",
             IsActive = true
         });
+        // 内置超级管理员（固定ID，不可删除/修改）
+        if (GetUserByUsername("1001") is null)
+        {
+            CreateUser(new User
+            {
+                Id = AppPages.BuiltInUserId,
+                Username = "1001",
+                PasswordHash = BCryptHash("1001"),
+                Role = UserRole.Admin,
+                DisplayName = "超级管理员",
+                IsActive = true
+            });
+        }
         return true;
     }
 

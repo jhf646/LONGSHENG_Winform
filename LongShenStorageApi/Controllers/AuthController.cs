@@ -41,12 +41,25 @@ public class AuthController : ControllerBase
             return Unauthorized(new { error = "用户名或密码错误" });
 
         var token = GenerateToken(user);
+        // 内置超级管理员拥有全部权限
+        List<string> allowedPages;
+        if (user.Id == AppPages.BuiltInUserId)
+        {
+            allowedPages = AppPages.PageNames.Keys.ToList();
+        }
+        else
+        {
+            var savedPermissions = _repo.GetRolePermissions(user.Role.ToString());
+            var defaultPermissions = AppPages.GetDefaultPages(user.Role);
+            allowedPages = savedPermissions.Count > 0 ? savedPermissions : defaultPermissions;
+        }
         return Ok(new LoginResponse
         {
             Token = token,
             DisplayName = user.DisplayName,
             Role = user.Role.ToString(),
-            UserId = user.Id
+            UserId = user.Id,
+            AllowedPages = allowedPages
         });
     }
 
@@ -111,6 +124,9 @@ public class AuthController : ControllerBase
     [Authorize(Roles = "Admin")]
     public IActionResult UpdateUser(Guid id, [FromBody] UpdateUserRequest request)
     {
+        if (id == AppPages.BuiltInUserId)
+            return BadRequest(new { error = "内置超级管理员账号不可修改" });
+
         var user = _repo.GetUserById(id);
         if (user is null) return NotFound(new { error = "用户不存在" });
 
@@ -131,6 +147,9 @@ public class AuthController : ControllerBase
     [Authorize(Roles = "Admin")]
     public IActionResult ResetPassword(Guid id, [FromBody] PasswordResetRequest request)
     {
+        if (id == AppPages.BuiltInUserId)
+            return BadRequest(new { error = "内置超级管理员账号不可修改" });
+
         if (string.IsNullOrWhiteSpace(request.NewPassword))
             return BadRequest(new { error = "密码不能为空" });
 
@@ -147,6 +166,9 @@ public class AuthController : ControllerBase
     [Authorize(Roles = "Admin")]
     public IActionResult DeleteUser(Guid id)
     {
+        if (id == AppPages.BuiltInUserId)
+            return BadRequest(new { error = "内置超级管理员账号不可删除" });
+
         var user = _repo.GetUserById(id);
         if (user is null) return NotFound(new { error = "用户不存在" });
 
