@@ -51,7 +51,7 @@ public class AppStateController : ControllerBase
     public ActionResult<object> GetDropdowns()
     {
         var state = _repo.Load();
-        var palletNumbers = state.PalletNumbers?.Count > 0 ? state.PalletNumbers : Enumerable.Range(1, 66).Select(i => $"T{i}").ToList();
+        var palletNumbers = state.PalletNumbers?.Count > 0 ? state.PalletNumbers : Enumerable.Range(1, 66).Select(i => $"{i:D3}").ToList();
         return Ok(new
         {
             palletNumbers,

@@ -202,7 +202,7 @@ public sealed class SqlServerRepository
 
         // 默认托盘号
         if (state.PalletNumbers.Count == 0)
-            state.PalletNumbers = Enumerable.Range(1, 66).Select(i => $"T{i}").ToList();
+            state.PalletNumbers = Enumerable.Range(1, 66).Select(i => $"{i:D3}").ToList();
     }
 
     private static void AddUnique(List<string> list, IEnumerable<string> items)
@@ -428,7 +428,7 @@ public sealed class SqlServerRepository
         if (!string.IsNullOrWhiteSpace(specifiedSlot))
             return state.Slots.FirstOrDefault(s => s.SlotCode.Equals(specifiedSlot, StringComparison.OrdinalIgnoreCase) && !s.IsOccupied);
 
-        // 2. 根据托盘号提取数字，匹配内部编号库位（T10 → 内部编号10）
+        // 2. 根据托盘号提取数字，匹配内部编号库位（"010" → 内部编号10）
         if (!string.IsNullOrWhiteSpace(palletNumber))
         {
             var numStr = new string(palletNumber.Where(char.IsDigit).ToArray());

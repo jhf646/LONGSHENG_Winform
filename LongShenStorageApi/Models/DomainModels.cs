@@ -84,7 +84,7 @@ public sealed class AppState
     public List<StorageSlot> Slots { get; set; } = new();
     public List<LedgerEntry> Ledger { get; set; } = new();
     public InventoryAlertSettings AlertSettings { get; set; } = new();
-    public List<string> PalletNumbers { get; set; } = Enumerable.Range(1, 66).Select(i => $"T{i}").ToList();
+    public List<string> PalletNumbers { get; set; } = Enumerable.Range(1, 66).Select(i => $"{i:D3}").ToList();
     public List<string> ToolingNumbers { get; set; } = new();
     public List<string> ProjectNumbers { get; set; } = new();
     public List<string> ModelTypes { get; set; } = new();

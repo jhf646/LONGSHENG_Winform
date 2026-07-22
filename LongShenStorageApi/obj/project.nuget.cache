@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "Dd8kddq0ToI=",
+  "dgSpecHash": "rThLYiJimxU=",
   "success": true,
-  "projectFilePath": "c:\\Users\\jiaohengfei\\Desktop\\上海隆深\\上海隆深软件\\隆深软件程序\\LongShenStorageApi\\LongShenStorageApi.csproj",
+  "projectFilePath": "C:\\Users\\jiaohengfei\\Desktop\\上海隆深\\上海隆深软件\\隆深软件程序\\LongShenStorageApi\\LongShenStorageApi.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\jiaohengfei\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\10.0.9\\microsoft.aspnetcore.authentication.jwtbearer.10.0.9.nupkg.sha512",
     "C:\\Users\\jiaohengfei\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.9\\microsoft.aspnetcore.openapi.10.0.9.nupkg.sha512",
