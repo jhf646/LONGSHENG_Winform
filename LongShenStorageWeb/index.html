@@ -110,14 +110,12 @@
             <div class="form-group"><label>电解槽编号</label><input id="inCellNumber" placeholder="批次入库保留"></div>
             <div class="form-group"><label>组件节数</label><input type="number" id="inComponentSections" min="1" max="20" value="1"></div>
             <div class="form-group"><label>客户名称</label><input id="inCustomer" list="dlCustomer" placeholder="自行输入"></div>
-            <div class="form-group"><label>操作人员</label><input id="inOperator" placeholder="必填"></div>
-            <div class="form-group"><label>指定货位(可选)</label><input id="inSlot" placeholder="留空自动分配"></div>
+            <div class="form-group"><label>操作人员</label><input id="inOperator" readonly style="background:#f5f5f5;cursor:not-allowed"></div>
             <div class="form-group full"><label>备注</label><textarea id="inNotes"></textarea></div>
           </div>
           <datalist id="dlPallet"></datalist><datalist id="dlTooling"></datalist><datalist id="dlProject"></datalist><datalist id="dlModel"></datalist><datalist id="dlCustomer"></datalist>
           <div class="btn-group">
-            <button class="btn btn-primary" onclick="handleInbound(false)">🔄 自动分配</button>
-            <button class="btn btn-success" onclick="handleInbound(true)">📍 指定货位</button>
+            <button class="btn btn-primary" onclick="handleInbound()">📥 入库确认</button>
             <button class="btn" onclick="clearInbound()">🗑️ 清空</button>
           </div>
         </div>
@@ -129,16 +127,35 @@
 
     <!-- 出库 -->
     <div class="page" id="page-outbound">
-      <div class="card"><div class="card-header">📤 出库指令</div>
+      <div class="card"><div class="card-header">� 在库清单 - 选择要出库的工件</div>
+        <div class="card-body">
+          <div style="display:flex;gap:12px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+            <input type="text" id="outSearch" placeholder="🔍 搜索托盘号、型号、货位号..." style="flex:1;min-width:200px;padding:8px 12px;font-size:14px;border:1px solid var(--border);border-radius:6px;outline:none" oninput="filterOutboundTable()">
+            <select id="outFilterModel" style="padding:8px 12px;font-size:14px;border:1px solid var(--border);border-radius:6px;outline:none" onchange="filterOutboundTable()">
+              <option value="">全部型号</option>
+            </select>
+            <select id="outFilterProject" style="padding:8px 12px;font-size:14px;border:1px solid var(--border);border-radius:6px;outline:none" onchange="filterOutboundTable()">
+              <option value="">全部项目</option>
+            </select>
+            <button class="btn btn-primary" onclick="loadOutboundInventory()">🔄 刷新</button>
+          </div>
+          <div class="table-wrap" style="max-height:380px">
+            <table class="data-table" id="outboundInventoryTable">
+              <thead><tr><th style="width:40px">选择</th><th>托盘号</th><th>工装号</th><th>项目号</th><th>型号</th><th>工单号</th><th>货位</th><th>入库时间</th><th>操作人</th></tr></thead>
+              <tbody id="outboundInventoryBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="card" id="outboundSelectedCard" style="display:none">
+        <div class="card-header">📤 出库确认 — <span id="outSelectedLabel"></span></div>
         <div class="card-body">
           <div class="form-grid" style="grid-template-columns:1fr">
-            <div class="form-group"><label>目标托盘</label><select id="outRecord"></select></div>
-            <div class="form-group"><label>操作人员</label><input id="outOperator" placeholder="必填"></div>
-            <div class="form-group"><label>指定货位(可选)</label><input id="outSlot" placeholder="留空自动匹配"></div>
+            <div class="form-group"><label>操作人员</label><input id="outOperator" readonly style="background:#f5f5f5;cursor:not-allowed"></div>
           </div>
           <div class="btn-group">
             <button class="btn btn-danger" onclick="handleOutbound()">📤 执行出库</button>
-            <button class="btn" onclick="loadOutboundOptions()">🔄 刷新</button>
+            <button class="btn" onclick="document.getElementById('outboundSelectedCard').style.display='none';document.getElementById('outSelectedId').value=''">取消</button>
           </div>
         </div>
       </div>
@@ -149,10 +166,7 @@
 
     <!-- 货位 -->
     <div class="page" id="page-slots">
-      <div class="card"><div class="card-header">🗄️ 货位可视化</div>
-        <div class="card-body"><div class="legend"><div class="legend-item"><div class="legend-swatch" style="background:#eafaf1"></div>空闲</div><div class="legend-item"><div class="legend-swatch" style="background:#fde8e8"></div>占用</div><div class="legend-item"><div class="legend-swatch" style="background:#f0f0f0;border:1px dashed #ccc"></div>禁用</div></div><div class="slot-visual" id="slotMgmtSlots"></div></div>
-      </div>
-      <div class="card"><div class="card-header">🔍 库位搜索与编辑</div>
+      <div class="card"><div class="card-header"> 库位搜索与编辑</div>
         <div class="card-body">
           <div style="display:flex;gap:12px;margin-bottom:12px;align-items:center">
             <input type="text" id="slotSearch" placeholder="搜索货位号、内部编号、位置..." style="flex:1;padding:8px 12px;font-size:14px;border:1px solid var(--border);border-radius:6px;outline:none" oninput="filterSlotTable()">

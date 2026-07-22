@@ -100,6 +100,8 @@ async function switchPage(pageId) {
         else if (pageId === 'roles') { loadRolePage(); }
         else if (pageId === 'devcontrol') { await loadDeviceRegisters(); }
         else if (pageId === 'devmonitor') { await loadDeviceMonitor(); }
+        else if (pageId === 'outbound') { await loadOutboundInventory(); loadOutboundRecent(); }
+        else if (pageId === 'inbound') { loadInboundRecent(); if (currentUser) document.getElementById('inOperator').value = currentUser.displayName || ''; }
     } catch(e) { console.warn('页面加载错误:', e); }
 }
 
@@ -116,7 +118,6 @@ function updateClock() {
 }
 async function initApp() {
     await Promise.all([loadDashboard(), loadDropdowns()]);
-    loadOutboundOptions();
     const now = new Date();
     document.getElementById('ledgerStart').value = new Date(now.getTime() - 7*86400000).toISOString().slice(0,16);
     document.getElementById('ledgerEnd').value = now.toISOString().slice(0,16);
@@ -202,15 +203,16 @@ function renderSlotVisual(containerId, slots) {
 // ===== 入库 =====
 let lastWorkOrder = '', lastCellNumber = '';
 function clearInbound() {
-    ['inPallet','inTooling','inProject','inModel','inCustomer','inOperator','inSlot','inNotes'].forEach(id => {
+    ['inPallet','inTooling','inProject','inModel','inCustomer','inWorkOrder','inCellNumber','inNotes'].forEach(id => {
         const el = document.getElementById(id); if (el) el.value = '';
     });
     document.getElementById('inComponentSections').value = '1';
+    if (currentUser) document.getElementById('inOperator').value = currentUser.displayName || '';
 }
 
-async function handleInbound(useSpecifiedSlot) {
+async function handleInbound() {
     const operator = document.getElementById('inOperator').value.trim();
-    if (!operator) { toast('请输入操作人员', 'error'); return; }
+    if (!operator) { toast('请先登录', 'error'); return; }
     const payload = {
         palletNumber: document.getElementById('inPallet').value.trim(),
         toolingNumber: document.getElementById('inTooling').value.trim(),
@@ -221,7 +223,7 @@ async function handleInbound(useSpecifiedSlot) {
         componentSections: parseInt(document.getElementById('inComponentSections').value) || 1,
         customerName: document.getElementById('inCustomer').value.trim(),
         operatorName: operator,
-        specifiedSlot: useSpecifiedSlot ? document.getElementById('inSlot').value.trim() : null,
+        specifiedSlot: null,
         notes: document.getElementById('inNotes').value.trim()
     };
     try {
@@ -256,27 +258,92 @@ async function loadInboundRecent() {
 }
 
 // ===== 出库 =====
-async function loadOutboundOptions() {
+let selectedOutboundId = null;
+
+async function loadOutboundInventory() {
     try {
         const items = await api('/workpiecerecords');
-        document.getElementById('outRecord').innerHTML = items.map(r =>
-            `<option value="${r.id}">${r.palletNumber} | ${r.modelType || '-'} | ${r.slotCode}</option>`
-        ).join('') || '<option value="">暂无在库工件</option>';
-    } catch(e) { toast('加载失败', 'error'); }
+        // 填充型号和项目筛选
+        const models = [...new Set(items.map(r => r.modelType).filter(Boolean))];
+        const projects = [...new Set(items.map(r => r.projectNumber).filter(Boolean))];
+        const modelSelect = document.getElementById('outFilterModel');
+        const projectSelect = document.getElementById('outFilterProject');
+        modelSelect.innerHTML = '<option value="">全部型号</option>' + models.map(m => `<option value="${m}">${m}</option>`).join('');
+        projectSelect.innerHTML = '<option value="">全部项目</option>' + projects.map(p => `<option value="${p}">${p}</option>`).join('');
+
+        window._outboundInventory = items;
+        renderOutboundTable(items);
+    } catch(e) { toast('加载在库清单失败: ' + e.message, 'error'); }
+}
+
+function renderOutboundTable(items) {
+    const tbody = document.getElementById('outboundInventoryBody');
+    if (!items || items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">暂无在库工件</td></tr>';
+        return;
+    }
+    tbody.innerHTML = items.map(r => `
+        <tr onclick="selectOutboundRow('${r.id}')" id="outRow_${r.id}" style="cursor:pointer">
+            <td><input type="radio" name="outSelect" value="${r.id}" onclick="event.stopPropagation();selectOutboundRow('${r.id}')"></td>
+            <td><strong>${r.palletNumber || '-'}</strong></td>
+            <td>${r.toolingNumber || '-'}</td>
+            <td>${r.projectNumber || '-'}</td>
+            <td>${r.modelType || '-'}</td>
+            <td>${r.workOrder || '-'}</td>
+            <td>${r.slotCode || '-'}</td>
+            <td>${formatTime(r.inboundTime)}</td>
+            <td>${r.lastOperator || '-'}</td>
+        </tr>
+    `).join('');
+}
+
+function filterOutboundTable() {
+    const keyword = document.getElementById('outSearch').value.toLowerCase().trim();
+    const filterModel = document.getElementById('outFilterModel').value;
+    const filterProject = document.getElementById('outFilterProject').value;
+    const items = window._outboundInventory || [];
+    const filtered = items.filter(r => {
+        if (keyword && !r.palletNumber.toLowerCase().includes(keyword) &&
+            !r.modelType.toLowerCase().includes(keyword) &&
+            !r.slotCode.toLowerCase().includes(keyword) &&
+            !r.projectNumber.toLowerCase().includes(keyword) &&
+            !r.toolingNumber.toLowerCase().includes(keyword) &&
+            !r.workOrder.toLowerCase().includes(keyword)) return false;
+        if (filterModel && r.modelType !== filterModel) return false;
+        if (filterProject && r.projectNumber !== filterProject) return false;
+        return true;
+    });
+    renderOutboundTable(filtered);
+}
+
+function selectOutboundRow(id) {
+    selectedOutboundId = id;
+    // 高亮选中的行
+    document.querySelectorAll('#outboundInventoryBody tr').forEach(r => r.style.background = '');
+    const row = document.getElementById(`outRow_${id}`);
+    if (row) { row.style.background = '#e8f0fe'; row.querySelector('input').checked = true; }
+    // 显示出库确认卡片
+    const items = window._outboundInventory || [];
+    const item = items.find(r => r.id === id);
+    if (item) {
+        document.getElementById('outSelectedLabel').textContent = `${item.palletNumber} | ${item.modelType || '-'} | ${item.slotCode}`;
+        document.getElementById('outOperator').value = currentUser?.displayName || '';
+        document.getElementById('outboundSelectedCard').style.display = 'block';
+    }
 }
 
 async function handleOutbound() {
-    const recordId = document.getElementById('outRecord').value;
+    const recordId = selectedOutboundId;
     const operator = document.getElementById('outOperator').value.trim();
     if (!recordId || !operator) { toast('请选择工件并输入操作人员', 'error'); return; }
     try {
         await api('/workpiecerecords/outbound', { method: 'POST', body: JSON.stringify({
-            recordId, operatorName: operator,
-            specifiedSlot: document.getElementById('outSlot').value.trim() || null
+            recordId, operatorName: operator
         })});
         toast('✅ 出库成功', 'success');
-        document.getElementById('outOperator').value = ''; document.getElementById('outSlot').value = '';
-        await Promise.all([loadDashboard(), loadOutboundOptions()]);
+        document.getElementById('outboundSelectedCard').style.display = 'none';
+        selectedOutboundId = null;
+        await Promise.all([loadDashboard(), loadOutboundInventory()]);
         loadOutboundRecent();
     } catch(e) { toast('❌ 出库失败: ' + e.message, 'error'); }
 }
@@ -401,7 +468,6 @@ async function loadSlotPage() {
     try {
         const state = await api('/appstate');
         editingSlotData = state.slots;
-        renderSlotVisual('slotMgmtSlots', state.slots);
         document.getElementById('slotTableBody').innerHTML = state.slots.map(s => {
             const isDisabled = s.isEnabled === false;
             const statusText = isDisabled ? '禁用' : (s.isOccupied ? '占用' : '空闲');
