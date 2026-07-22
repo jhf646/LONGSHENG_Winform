@@ -601,17 +601,17 @@ async function loadDeviceMonitor() {
 
         // 寄存器表
         const allRegs = [
-            {a:100,n:'立库状态',v:st.state,d:'1空闲 2运行 3故障'},
-            {a:101,n:'故障代码',v:st.errorCode,d:''},{a:102,n:'运行模式',v:st.mode,d:'1手动 2自动'},
-            {a:103,n:'动作步骤',v:st.step,d:''},{a:104,n:'任务完成',v:fl.taskDone,d:'1完成 2执行'},
-            {a:105,n:'转移状态',v:fl.transferState,d:'1未取 2已转 3到位'},
-            {a:107,n:'X轴位置',v:pos.x,d:'mm'},{a:108,n:'Y轴位置',v:pos.y,d:'mm'},
-            {a:109,n:'Z深库',v:pos.zDeep,d:'mm'},{a:110,n:'Z浅库',v:pos.zShallow,d:'mm'},
-            {a:111,n:'可移库',v:fl.canMove,d:'1可 2不可'},{a:112,n:'左入可入库',v:fl.leftIn,d:'1可 2不可'},
-            {a:113,n:'左出可出库',v:fl.leftOut,d:'1可 2不可'},{a:114,n:'右入可入库',v:fl.rightIn,d:'1可 2不可'},
-            {a:115,n:'右出可出库',v:fl.rightOut,d:'1可 2不可'},{a:116,n:'A→B完成',v:fl.actionDone,d:'0/1'},
-            {a:117,n:'堆垛车位置',v:fl.carrierPos,d:'车位号'},{a:101,n:'设备序号',v:cmd.deviceNo,d:'写入区'},
-            {a:103,n:'动作标志',v:cmd.actionFlag,d:'写入区'},{a:112,n:'动作类型',v:cmd.actionType,d:'1默认 2出库 3入库'}
+            {a:4009,n:'立库状态',v:st.state,d:'1空闲 2运行 3故障'},
+            {a:4010,n:'故障代码',v:st.errorCode,d:''},{a:4011,n:'运行模式',v:st.mode,d:'1手动 2自动'},
+            {a:4012,n:'动作步骤',v:st.step,d:''},{a:4013,n:'任务完成',v:fl.taskDone,d:'1完成 2执行'},
+            {a:4014,n:'转移状态',v:fl.transferState,d:'1未取 2已转 3到位'},
+            {a:4016,n:'X轴位置',v:pos.x,d:'mm'},{a:4017,n:'Y轴位置',v:pos.y,d:'mm'},
+            {a:4018,n:'Z深库',v:pos.zDeep,d:'mm'},{a:4019,n:'Z浅库',v:pos.zShallow,d:'mm'},
+            {a:4020,n:'可移库',v:pos.zShallow,d:'1可 2不可'},{a:4021,n:'左入可入库',v:fl.leftIn,d:'1可 2不可'},
+            {a:4022,n:'左出可出库',v:fl.leftOut,d:'1可 2不可'},{a:4023,n:'右入可入库',v:fl.rightIn,d:'1可 2不可'},
+            {a:4024,n:'右出可出库',v:fl.rightOut,d:'1可 2不可'},{a:4025,n:'A→B完成',v:fl.actionDone,d:'0/1'},
+            {a:4026,n:'堆垛车位置',v:fl.carrierPos,d:'车位号'},{a:4101,n:'设备序号',v:cmd.deviceNo,d:'写入区'},
+            {a:4102,n:'动作序列/标志',v:cmd.seqNo,d:'写入区'},{a:4111,n:'动作类型',v:cmd.actionType,d:'1默认 2出库 3入库'}
         ];
         document.getElementById('devRegisterTable').innerHTML = allRegs.map(r =>
             `<tr><td>D${r.a}</td><td>${r.n}</td><td style="font-weight:bold;font-size:14px">${r.v}</td><td style="color:var(--text-secondary);font-size:12px">${r.d}</td></tr>`
@@ -646,7 +646,7 @@ async function loadDeviceRegisters() {
 }
 
 function getCmdKey(addr) {
-    const map = {101:'deviceNo',102:'seqNo',103:'actionFlag',104:'aRow',105:'aCol',106:'aLevel',107:'bRow',108:'bCol',109:'bLevel',110:'param1',111:'param2',112:'actionType'};
+    const map = {4101:'deviceNo',4102:'seqNo',4103:'aRow',4104:'aCol',4105:'aLevel',4106:'bRow',4107:'bCol',4108:'bLevel',4109:'param1',4110:'param2',4111:'actionType'};
     return map[addr] || '';
 }
 

@@ -112,15 +112,16 @@ public class DeviceController : ControllerBase
 
             var data = new Dictionary<string, object>
             {
-                ["status"] = new { state = V(0), errorCode = V(1), mode = V(2), step = V(3) },
+                ["deviceNo"] = V(0),
+                ["status"] = new { state = V(1), errorCode = V(2), mode = V(3), step = V(4) },
                 ["flags"] = new
                 {
-                    taskDone = V(4), transferState = V(5), spare = V(6),
-                    leftIn = V(12), leftOut = V(13), rightIn = V(14),
-                    rightOut = V(15), actionDone = V(16), carrierPos = V(17)
+                    taskDone = V(5), transferState = V(6), spare = V(7),
+                    leftIn = V(13), leftOut = V(14), rightIn = V(15),
+                    rightOut = V(16), actionDone = V(17), carrierPos = V(18)
                 },
-                ["position"] = new { x = V(7), y = V(8), zDeep = V(9), zShallow = V(10) },
-                ["canMove"] = V(11),
+                ["position"] = new { x = V(8), y = V(9), zDeep = V(10), zShallow = V(11) },
+                ["canMove"] = V(12),
                 ["connected"] = _device.IsConnected,
                 ["configName"] = _config.GetConfig().DeviceName,
                 ["command"] = new
@@ -157,16 +158,15 @@ public class DeviceController : ControllerBase
     [HttpPost("command")]
     public async Task<IActionResult> SendCommand([FromBody] DeviceCommand cmd)
     {
-        await _device.WriteHoldingRegisterAsync(101, (ushort)cmd.DeviceNo);
-        await _device.WriteHoldingRegisterAsync(102, 1);
-        await _device.WriteHoldingRegisterAsync(104, (ushort)cmd.FromRow);
-        await _device.WriteHoldingRegisterAsync(105, (ushort)cmd.FromCol);
-        await _device.WriteHoldingRegisterAsync(106, (ushort)cmd.FromLevel);
-        await _device.WriteHoldingRegisterAsync(107, (ushort)cmd.ToRow);
-        await _device.WriteHoldingRegisterAsync(108, (ushort)cmd.ToCol);
-        await _device.WriteHoldingRegisterAsync(109, (ushort)cmd.ToLevel);
-        await _device.WriteHoldingRegisterAsync(112, (ushort)cmd.ActionType);
-        await _device.WriteHoldingRegisterAsync(103, 1);
+        await _device.WriteHoldingRegisterAsync(4101, (ushort)cmd.DeviceNo);
+        await _device.WriteHoldingRegisterAsync(4102, 1); // 动作序列+标志位(合并)
+        await _device.WriteHoldingRegisterAsync(4103, (ushort)cmd.FromRow);
+        await _device.WriteHoldingRegisterAsync(4104, (ushort)cmd.FromCol);
+        await _device.WriteHoldingRegisterAsync(4105, (ushort)cmd.FromLevel);
+        await _device.WriteHoldingRegisterAsync(4106, (ushort)cmd.ToRow);
+        await _device.WriteHoldingRegisterAsync(4107, (ushort)cmd.ToCol);
+        await _device.WriteHoldingRegisterAsync(4108, (ushort)cmd.ToLevel);
+        await _device.WriteHoldingRegisterAsync(4111, (ushort)cmd.ActionType);
 
         return Ok(new { message = $"指令已发送: {cmd.ActionType} | A({cmd.FromRow},{cmd.FromCol},{cmd.FromLevel}) → B({cmd.ToRow},{cmd.ToCol},{cmd.ToLevel})" });
     }
