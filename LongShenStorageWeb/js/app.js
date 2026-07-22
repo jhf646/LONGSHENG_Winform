@@ -68,22 +68,25 @@ function applyPagePermissions() {
 }
 
 // ===== 页面导航 =====
-function switchPage(pageId) {
+async function switchPage(pageId) {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === pageId));
     document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === `page-${pageId}`));
     const titles = { dashboard: '仪表盘', inbound: '入库管理', outbound: '出库管理', slots: '货位管理', ledger: '台账查询', report: '报表统计', users: '用户管理', alert: '库存预警', roles: '角色权限', devmonitor: '设备监控', devcontrol: '设备调用' };
     document.getElementById('pageTitle').textContent = titles[pageId] || pageId;
-    if (pageId === 'dashboard') loadDashboard();
-    if (pageId === 'slots') loadSlotPage();
-    if (pageId === 'ledger') { resetLedger(); queryLedger(); }
-    if (pageId === 'users') loadUserList();
-    if (pageId === 'alert') loadAlertPage();
-    if (pageId === 'roles') loadRolePage();
-    if (pageId === 'devmonitor') loadDeviceMonitor();
-    if (pageId === 'devcontrol') { loadDeviceRegisters(); loadDeviceMonitor(); }
+    try {
+        if (pageId === 'dashboard') { loadDashboard(); }
+        else if (pageId === 'slots') { loadSlotPage(); }
+        else if (pageId === 'ledger') { resetLedger(); queryLedger(); }
+        else if (pageId === 'users') { loadUserList(); }
+        else if (pageId === 'alert') { loadAlertPage(); }
+        else if (pageId === 'roles') { loadRolePage(); }
+        else if (pageId === 'devcontrol') { await loadDeviceRegisters(); }
+        else if (pageId === 'devmonitor') { await loadDeviceMonitor(); }
+    } catch(e) { console.warn('页面加载错误:', e); }
 }
 
 document.getElementById('tabNav').addEventListener('click', e => {
+    e.preventDefault();
     const item = e.target.closest('.nav-item');
     if (item && !item.classList.contains('hidden')) switchPage(item.dataset.page);
 });
@@ -587,7 +590,7 @@ async function loadDeviceMonitor() {
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
                 <div>任务完成: <strong>${fl.taskDone ? '✅' : '❌'}</strong></div>
                 <div>转移状态: <strong>${fl.transferState}</strong></div>
-                <div>可移库: <strong>${fl.canMove === 1 ? '✅' : '❌'}</strong></div>
+                <div>可移库: <strong>${data.canMove === 1 ? '✅' : '❌'}</strong></div>
                 <div>左入可入库: <strong>${fl.leftIn === 1 ? '✅' : '❌'}</strong></div>
                 <div>左出可出库: <strong>${fl.leftOut === 1 ? '✅' : '❌'}</strong></div>
                 <div>右入可入库: <strong>${fl.rightIn === 1 ? '✅' : '❌'}</strong></div>
@@ -601,16 +604,17 @@ async function loadDeviceMonitor() {
 
         // 寄存器表
         const allRegs = [
+            {a:4008,n:'设备序号',v:data.deviceNo ?? 0,d:''},
             {a:4009,n:'立库状态',v:st.state,d:'1空闲 2运行 3故障'},
             {a:4010,n:'故障代码',v:st.errorCode,d:''},{a:4011,n:'运行模式',v:st.mode,d:'1手动 2自动'},
             {a:4012,n:'动作步骤',v:st.step,d:''},{a:4013,n:'任务完成',v:fl.taskDone,d:'1完成 2执行'},
             {a:4014,n:'转移状态',v:fl.transferState,d:'1未取 2已转 3到位'},
             {a:4016,n:'X轴位置',v:pos.x,d:'mm'},{a:4017,n:'Y轴位置',v:pos.y,d:'mm'},
             {a:4018,n:'Z深库',v:pos.zDeep,d:'mm'},{a:4019,n:'Z浅库',v:pos.zShallow,d:'mm'},
-            {a:4020,n:'可移库',v:pos.zShallow,d:'1可 2不可'},{a:4021,n:'左入可入库',v:fl.leftIn,d:'1可 2不可'},
+            {a:4020,n:'可移库',v:data.canMove ?? 0,d:'1可 2不可'},{a:4021,n:'左入可入库',v:fl.leftIn,d:'1可 2不可'},
             {a:4022,n:'左出可出库',v:fl.leftOut,d:'1可 2不可'},{a:4023,n:'右入可入库',v:fl.rightIn,d:'1可 2不可'},
             {a:4024,n:'右出可出库',v:fl.rightOut,d:'1可 2不可'},{a:4025,n:'A→B完成',v:fl.actionDone,d:'0/1'},
-            {a:4026,n:'堆垛车位置',v:fl.carrierPos,d:'车位号'},{a:2022,n:'设备序号',v:current.deviceNo ?? 0,d:'写入区'},
+            {a:4026,n:'堆垛车位置',v:fl.carrierPos,d:'车位号'},{a:2022,n:'设备序号',v:data.deviceNo ?? 0,d:'写入区'},
             {a:2023,n:'动作序列/标志',v:cmd.seqNo,d:'写入区'},{a:2024,n:'排',v:cmd.row ?? 0,d:'写入区'},
             {a:2025,n:'列',v:cmd.col ?? 0,d:'写入区'},{a:2026,n:'层',v:cmd.level ?? 0,d:'写入区'}
         ];
@@ -618,12 +622,17 @@ async function loadDeviceMonitor() {
             `<tr><td>D${r.a}</td><td>${r.n}</td><td style="font-weight:bold;font-size:14px">${r.v}</td><td style="color:var(--text-secondary);font-size:12px">${r.d}</td></tr>`
         ).join('');
 
-        // 自动刷新
-        if (document.getElementById('page-devmonitor').classList.contains('active')) {
-            clearTimeout(devMonitorTimer);
-            devMonitorTimer = setTimeout(loadDeviceMonitor, 2000);
+        // 自动刷新 - 仅连接成功时才快速刷新，否则慢速
+        const isActive = document.getElementById('page-devmonitor').classList.contains('active');
+        clearTimeout(devMonitorTimer);
+        if (isActive) {
+            const interval = data.connected ? 2000 : 10000;
+            devMonitorTimer = setTimeout(loadDeviceMonitor, interval);
         }
-    } catch(e) { /* 静默重试 */ if (document.getElementById('page-devmonitor').classList.contains('active')) setTimeout(loadDeviceMonitor, 3000); }
+    } catch(e) {
+        if (document.getElementById('page-devmonitor').classList.contains('active'))
+            devMonitorTimer = setTimeout(loadDeviceMonitor, 10000);
+    }
 }
 
 // ===== 设备调用 =====
@@ -647,13 +656,14 @@ async function loadDeviceRegisters() {
 }
 
 function getCmdKey(addr) {
-    const map = {2022:'deviceNo',2023:'seqNo',2024:'row',2025:'col',2026:'level'};
+    const map = {2022:'deviceNo',2023:'actionFlag',2024:'row',2025:'col',2026:'level'};
     return map[addr] || '';
 }
 
 async function sendDeviceCommand() {
     const cmd = {
         deviceNo: parseInt(document.getElementById('cmdDeviceNo').value) || 1,
+        actionFlag: parseInt(document.getElementById('cmdActionFlag').value) || 1,
         fromRow: parseInt(document.getElementById('cmdFromRow').value) || 1,
         fromCol: parseInt(document.getElementById('cmdFromCol').value) || 1,
         fromLevel: parseInt(document.getElementById('cmdFromLevel').value) || 1

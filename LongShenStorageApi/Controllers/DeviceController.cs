@@ -126,7 +126,7 @@ public class DeviceController : ControllerBase
                 ["configName"] = _config.GetConfig().DeviceName,
                 ["command"] = new
                 {
-                    deviceNo = 0, seqNo = 0,
+                    deviceNo = 0, actionFlag = 0,
                     row = 0, col = 0, level = 0
                 }
             };
@@ -158,7 +158,7 @@ public class DeviceController : ControllerBase
     {
         // 实际PLC写入地址 2022~2029，不分出入库，位置统一用排/列/层
         await _device.WriteHoldingRegisterAsync(2022, (ushort)cmd.DeviceNo);
-        await _device.WriteHoldingRegisterAsync(2023, 1); // 动作序列+标志位
+        await _device.WriteHoldingRegisterAsync(2023, (ushort)cmd.ActionFlag); // 动作序列+标志位
         await _device.WriteHoldingRegisterAsync(2024, (ushort)cmd.FromRow);  // 排
         await _device.WriteHoldingRegisterAsync(2025, (ushort)cmd.FromCol);  // 列
         await _device.WriteHoldingRegisterAsync(2026, (ushort)cmd.FromLevel); // 层
@@ -176,6 +176,7 @@ public sealed class WriteRequest
 public sealed class DeviceCommand
 {
     public int DeviceNo { get; set; } = 1;
+    public int ActionFlag { get; set; } = 1;
     public int FromRow { get; set; }
     public int FromCol { get; set; }
     public int FromLevel { get; set; }

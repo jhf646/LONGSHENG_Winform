@@ -317,6 +317,7 @@
             <div style="padding:16px;background:#f0f4f8;border-radius:8px">
               <div style="font-size:13px;font-weight:bold;margin-bottom:8px">🎯 目标货位</div>
               <div class="form-group" style="margin-bottom:6px"><label style="font-size:12px">设备序号</label><input type="number" id="cmdDeviceNo" value="1" min="1"></div>
+              <div class="form-group" style="margin-bottom:6px"><label style="font-size:12px">动作标志</label><input type="number" id="cmdActionFlag" value="1" min="0" max="65535"></div>
               <div class="form-group" style="margin-bottom:6px"><label style="font-size:12px">排</label><input type="number" id="cmdFromRow" value="1" min="1" max="2"></div>
               <div class="form-group" style="margin-bottom:6px"><label style="font-size:12px">列</label><input type="number" id="cmdFromCol" value="1" min="1" max="4"></div>
               <div class="form-group"><label style="font-size:12px">层</label><input type="number" id="cmdFromLevel" value="1" min="1" max="8"></div>
@@ -361,7 +362,7 @@
   </div>
 </div>
 
-<script src="js/app.js"></script>
+<script src="js/app.js?v=20260722"></script>
 
 <!-- 用户编辑弹窗 -->
 <div class="modal-overlay hidden" id="userModal">

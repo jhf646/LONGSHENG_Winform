@@ -72,6 +72,24 @@ var app = builder.Build();
 
 app.UseCors();
 
+// 提供前端静态文件（Web文件夹在API项目上级目录）
+var webRoot = Path.Combine(Directory.GetCurrentDirectory(), "..", "LongShenStorageWeb");
+if (Directory.Exists(webRoot))
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(webRoot),
+        ServeUnknownFileTypes = true
+    });
+    // 访问 / 时重定向到 index.html
+    app.MapGet("/", () => Results.Redirect("/index.html"));
+}
+else
+{
+    app.MapGet("/", () => Results.Redirect("/swagger"));
+}
+
 // Swagger
 app.UseSwagger();
 app.UseSwaggerUI();
@@ -80,8 +98,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-app.MapGet("/", () => Results.Redirect("/swagger"));
 
 app.Run();
 

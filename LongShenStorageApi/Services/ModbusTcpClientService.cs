@@ -43,7 +43,9 @@ public sealed class ModbusTcpClientService : IModbusDevice, IDisposable
         {
             _tcpClient?.Dispose();
             _tcpClient = new TcpClient();
-            await _tcpClient.ConnectAsync(_host, _port);
+            // 设置3秒连接超时
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+            await _tcpClient.ConnectAsync(_host, _port, timeoutCts.Token);
             var factory = new ModbusFactory();
             _master = factory.CreateMaster(_tcpClient);
             _logger.Info($"PLC 连接成功: {_host}:{_port} (站号:{_slaveId})");
