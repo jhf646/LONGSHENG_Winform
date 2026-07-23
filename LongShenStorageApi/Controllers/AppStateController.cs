@@ -30,7 +30,7 @@ public class AppStateController : ControllerBase
         var state = _repo.Load();
         var inventoryCount = state.Inventory.Count;
         var occupied = state.Slots.Count(s => s.IsOccupied);
-        var free = state.Slots.Count(s => !s.IsOccupied);
+        var free = state.Slots.Count(s => !s.IsOccupied && !(s.RowNumber == 1 && s.ColumnNumber == 1 && s.LevelNumber == 1));
         var alert = inventoryCount < state.AlertSettings.MinThreshold || inventoryCount > state.AlertSettings.MaxThreshold;
         var alertText = inventoryCount < state.AlertSettings.MinThreshold ? "低于下限" : inventoryCount > state.AlertSettings.MaxThreshold ? "高于上限" : "正常";
 
