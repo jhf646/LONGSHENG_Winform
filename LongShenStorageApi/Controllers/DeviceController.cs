@@ -145,6 +145,41 @@ public class DeviceController : ControllerBase
         }
     }
 
+    /// <summary>PLC复位指令（仅故障状态允许）</summary>
+    [HttpPost("reset")]
+    public async Task<ActionResult<object>> ResetPlc()
+    {
+        try
+        {
+            // 查询PLC状态
+            var status = await _device.ReadHoldingRegisterAsync(4009);
+            _logger.Info($"复位前查询 D4009 = {status}");
+
+            if (status != 3)
+            {
+                var statusText = status switch { 1 => "空闲中", 2 => "运行中", 4 => "暂停中", _ => $"未知({status})" };
+                return Ok(new { success = false, message = $"当前立库状态为{statusText}，非故障状态，无需复位" });
+            }
+
+            // 发送复位指令: 00 08 00 00 00 06 01 05 00 64 FF 00
+            var resetFrame = new byte[] { 0x00, 0x08, 0x00, 0x00, 0x00, 0x06, 0x01, 0x05, 0x00, 0x64, 0xFF, 0x00 };
+            _logger.Info($"发送复位指令: {BitConverter.ToString(resetFrame)}");
+            await _device.SendRawFrameAsync(resetFrame);
+
+            // 等待2秒后检测状态
+            await Task.Delay(2000);
+            status = await _device.ReadHoldingRegisterAsync(4009);
+            _logger.Info($"复位后检测 D4009 = {status}");
+
+            return Ok(new { success = true, message = $"复位指令已发送，当前立库状态: {status}" });
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"复位失败: {ex.Message}");
+            return Ok(new { success = false, message = $"复位失败: {ex.Message}" });
+        }
+    }
+
     /// <summary>写入寄存器值</summary>
     [HttpPost("write")]
     public async Task<IActionResult> WriteRegister([FromBody] WriteRequest request)

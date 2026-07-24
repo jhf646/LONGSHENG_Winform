@@ -93,6 +93,24 @@ public sealed class ModbusTcpClientService : IModbusDevice, IDisposable
         _logger.Info($"写入 D{address} = {value}");
     }
 
+    public async Task SendRawFrameAsync(byte[] frame)
+    {
+        await EnsureConnectedAsync();
+        var stream = _tcpClient!.GetStream();
+        await stream.WriteAsync(frame);
+        _logger.Info($"发送原始帧: {BitConverter.ToString(frame)}");
+        // 等待100ms读取响应
+        await Task.Delay(100);
+        if (stream.DataAvailable)
+        {
+            var response = new byte[256];
+            var len = await stream.ReadAsync(response, 0, response.Length);
+            var respData = new byte[len];
+            Array.Copy(response, respData, len);
+            _logger.Info($"收到响应: {BitConverter.ToString(respData)}");
+        }
+    }
+
     public void Tick()
     {
         // 真实设备无需模拟，留空

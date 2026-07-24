@@ -23,6 +23,9 @@ public interface IModbusDevice
     /// <summary>写入单个保持寄存器 (功能码06)</summary>
     Task WriteHoldingRegisterAsync(int address, ushort value);
 
+    /// <summary>发送原始Modbus帧（用于复位等特殊指令）</summary>
+    Task SendRawFrameAsync(byte[] frame);
+
     /// <summary>模拟运行周期（模拟器用，真实设备忽略）</summary>
     void Tick();
 }

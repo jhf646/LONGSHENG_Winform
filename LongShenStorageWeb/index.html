@@ -352,7 +352,15 @@
         </div>
       </div>
 
-      <div class="card"><div class="card-header">📝 写入寄存器</div>
+      <div class="card"><div class="card-header">� PLC复位</div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">当立库处于故障状态(4009=3)时，可发送复位指令清除故障。</p>
+          <button class="btn btn-warning" onclick="resetPlc()">🔧 执行PLC复位</button>
+          <div id="resetResult" style="margin-top:8px;font-size:13px;display:none"></div>
+        </div>
+      </div>
+
+      <div class="card"><div class="card-header">�📝 写入寄存器</div>
         <div class="card-body">
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px" id="writeRegisters"></div>
         </div>

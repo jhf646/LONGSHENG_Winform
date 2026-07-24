@@ -38,6 +38,12 @@ public sealed class ModbusSimulator : IModbusDevice
     }
 
     /// <summary>模拟运行一个周期 - 响应写入指令，模拟设备运行</summary>
+    public Task SendRawFrameAsync(byte[] frame)
+    {
+        System.Console.WriteLine($"[Simulator] 收到原始帧: {BitConverter.ToString(frame)}");
+        return Task.CompletedTask;
+    }
+
     public void Tick()
     {
         lock (_lock)

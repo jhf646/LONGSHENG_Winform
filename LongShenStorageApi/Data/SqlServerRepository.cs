@@ -283,7 +283,13 @@ public sealed class SqlServerRepository
 
     private static void SaveInventory(SqlConnection conn, SqlTransaction tx, List<WorkpieceRecord> inventory)
     {
-        using var cmd = new SqlCommand(@"MERGE WorkpieceRecords AS target USING (SELECT @Id AS Id) AS source ON target.Id = source.Id WHEN MATCHED THEN UPDATE SET InboundTime = @InTime, SlotCode = @Slot, LastOperator = @Op, LastUpdated = @Upd, Notes = @Notes, PalletNumber = @Pallet, ToolingNumber = @Tool, ProjectNumber = @Proj, ModelType = @Model, WorkOrder = @Wo, CellNumber = @Cell, ComponentSections = @Comp, CustomerName = @Cust WHEN NOT MATCHED THEN INSERT (Id, InboundTime, SlotCode, LastOperator, LastUpdated, Notes, PalletNumber, ToolingNumber, ProjectNumber, ModelType, WorkOrder, CellNumber, ComponentSections, CustomerName) VALUES (@Id, @InTime, @Slot, @Op, @Upd, @Notes, @Pallet, @Tool, @Proj, @Model, @Wo, @Cell, @Comp, @Cust);", conn, tx);
+        // 先清空所有工件记录（出库后需要删除），再重新插入
+        using var del = new SqlCommand("DELETE FROM WorkpieceRecords", conn, tx);
+        del.ExecuteNonQuery();
+
+        if (inventory.Count == 0) return;
+
+        using var cmd = new SqlCommand(@"INSERT INTO WorkpieceRecords (Id, InboundTime, SlotCode, LastOperator, LastUpdated, Notes, PalletNumber, ToolingNumber, ProjectNumber, ModelType, WorkOrder, CellNumber, ComponentSections, CustomerName) VALUES (@Id, @InTime, @Slot, @Op, @Upd, @Notes, @Pallet, @Tool, @Proj, @Model, @Wo, @Cell, @Comp, @Cust);", conn, tx);
         cmd.Parameters.Add("@Id", System.Data.SqlDbType.UniqueIdentifier);
         cmd.Parameters.Add("@InTime", System.Data.SqlDbType.DateTime2);
         cmd.Parameters.Add("@Slot", System.Data.SqlDbType.NVarChar, 50);
