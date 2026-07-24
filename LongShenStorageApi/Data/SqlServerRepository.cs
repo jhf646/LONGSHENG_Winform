@@ -90,6 +90,10 @@ public sealed class SqlServerRepository
             -- 角色权限表
             IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='RolePermissions' AND xtype='U')
             CREATE TABLE RolePermissions (RoleName NVARCHAR(50) NOT NULL, PageId NVARCHAR(50) NOT NULL, PRIMARY KEY (RoleName, PageId));
+            -- 清理残留的工件记录：仅清理已释放库位的孤儿记录（修复MERGE不删除导致的历史残留）
+            DELETE r FROM WorkpieceRecords r
+            LEFT JOIN StorageSlots s ON r.SlotCode = s.SlotCode AND s.IsOccupied = 1
+            WHERE s.SlotCode IS NULL
             -- 迁移旧格式库位编码 (1P-1C-1L → 1排-1列-1层)，仅当表中有旧格式数据时执行
             IF EXISTS (SELECT * FROM StorageSlots WHERE SlotCode LIKE N'%P-%C-%L')
             BEGIN
