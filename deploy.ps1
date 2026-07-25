@@ -122,7 +122,7 @@ GO
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='AlertSettings' AND xtype='U')
 CREATE TABLE AlertSettings (Id INT PRIMARY KEY DEFAULT 1 CHECK (Id=1), MinThreshold INT NOT NULL DEFAULT 2, MaxThreshold INT NOT NULL DEFAULT 18);
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='StorageSlots' AND xtype='U')
-CREATE TABLE StorageSlots (SlotCode NVARCHAR(50) PRIMARY KEY, IsOccupied BIT NOT NULL DEFAULT 0, WorkpieceId UNIQUEIDENTIFIER NULL, Zone NVARCHAR(50) NOT NULL DEFAULT '', RowNumber INT NOT NULL, ColumnNumber INT NOT NULL, LevelNumber INT NOT NULL);
+CREATE TABLE StorageSlots (SlotCode NVARCHAR(50) PRIMARY KEY, IsOccupied BIT NOT NULL DEFAULT 0, WorkpieceId UNIQUEIDENTIFIER NULL, Zone NVARCHAR(50) NOT NULL DEFAULT '', RowNumber INT NOT NULL, ColumnNumber INT NOT NULL, LevelNumber INT NOT NULL, InternalNumber INT NOT NULL DEFAULT 0, IsEnabled BIT NOT NULL DEFAULT 1);
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WorkpieceRecords' AND xtype='U')
 CREATE TABLE WorkpieceRecords (Id UNIQUEIDENTIFIER PRIMARY KEY, InboundTime DATETIME2 NOT NULL DEFAULT GETDATE(), SlotCode NVARCHAR(50) NOT NULL, LastOperator NVARCHAR(100) NOT NULL DEFAULT '', LastUpdated DATETIME2 NOT NULL DEFAULT GETDATE(), Notes NVARCHAR(500) NOT NULL DEFAULT '', PalletNumber NVARCHAR(50) NOT NULL DEFAULT '', ToolingNumber NVARCHAR(200) NOT NULL DEFAULT '', ProjectNumber NVARCHAR(200) NOT NULL DEFAULT '', ModelType NVARCHAR(200) NOT NULL DEFAULT '', WorkOrder NVARCHAR(200) NOT NULL DEFAULT '', CellNumber NVARCHAR(200) NOT NULL DEFAULT '', ComponentSections INT NOT NULL DEFAULT 1, CustomerName NVARCHAR(200) NOT NULL DEFAULT '');
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='LedgerEntries' AND xtype='U')
@@ -133,12 +133,15 @@ IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='DropdownOptions' AND xtype='
 CREATE TABLE DropdownOptions (Category NVARCHAR(50) NOT NULL, Value NVARCHAR(200) NOT NULL, PRIMARY KEY (Category, Value));
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='RolePermissions' AND xtype='U')
 CREATE TABLE RolePermissions (RoleName NVARCHAR(50) NOT NULL, PageId NVARCHAR(50) NOT NULL, PRIMARY KEY (RoleName, PageId));
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='FaultTasks' AND xtype='U')
+CREATE TABLE FaultTasks (Id UNIQUEIDENTIFIER PRIMARY KEY, TaskType NVARCHAR(20) NOT NULL, PalletNumber NVARCHAR(50) NOT NULL DEFAULT '', ToolingNumber NVARCHAR(200) NOT NULL DEFAULT '', ProjectNumber NVARCHAR(200) NOT NULL DEFAULT '', ModelType NVARCHAR(200) NOT NULL DEFAULT '', WorkOrder NVARCHAR(200) NOT NULL DEFAULT '', CellNumber NVARCHAR(200) NOT NULL DEFAULT '', ComponentSections INT NOT NULL DEFAULT 1, CustomerName NVARCHAR(200) NOT NULL DEFAULT '', OperatorName NVARCHAR(100) NOT NULL DEFAULT '', Notes NVARCHAR(500) NOT NULL DEFAULT '', Row INT NOT NULL DEFAULT 0, Col INT NOT NULL DEFAULT 0, Level INT NOT NULL DEFAULT 0, SlotCode NVARCHAR(50) NOT NULL DEFAULT '', RecordId UNIQUEIDENTIFIER NULL, FaultReason NVARCHAR(500) NOT NULL DEFAULT '', FaultTime DATETIME2 NOT NULL DEFAULT GETDATE(), Status NVARCHAR(20) NOT NULL DEFAULT 'Pending', ResolveAction NVARCHAR(50) NOT NULL DEFAULT '', ResolveTime DATETIME2 NULL, ResolvedBy NVARCHAR(100) NOT NULL DEFAULT '');
 GO
 IF NOT EXISTS (SELECT 1 FROM StorageSlots)
 BEGIN
-DECLARE @r INT=1,@c INT,@l INT;
+DECLARE @r INT=1,@c INT,@l INT,@in INT;
 WHILE @r<=2 BEGIN SET @c=1; WHILE @c<=4 BEGIN SET @l=1; WHILE @l<=8 BEGIN
-INSERT INTO StorageSlots VALUES(CAST(@r AS NVARCHAR)+N'排-'+CAST(@c AS NVARCHAR)+N'列-'+CAST(@l AS NVARCHAR)+N'层',0,NULL,CAST(@r AS NVARCHAR)+N'排',@r,@c,@l); SET @l+=1; END SET @c+=1; END SET @r+=1; END
+SET @in = CASE WHEN @r=1 AND @l=1 AND @c=1 THEN 0 WHEN @l=1 AND @r=1 THEN @c-1 WHEN @l=1 AND @r=2 THEN @c+3 WHEN @r=1 THEN 8*@l-9+@c ELSE 8*@l-5+@c END;
+INSERT INTO StorageSlots VALUES(CAST(@r AS NVARCHAR)+N'排-'+CAST(@c AS NVARCHAR)+N'列-'+CAST(@l AS NVARCHAR)+N'层',0,NULL,CAST(@r AS NVARCHAR)+N'排',@r,@c,@l,@in,1); SET @l+=1; END SET @c+=1; END SET @r+=1; END
 PRINT '64 slots created';
 END
 IF NOT EXISTS (SELECT 1 FROM AlertSettings) INSERT INTO AlertSettings VALUES(1,2,18);
@@ -209,7 +212,7 @@ if (-not $SkipApi) {
     }
 
     # 复制配置文件
-    @("appsettings.json", "registers.json") | ForEach-Object {
+    @("appsettings.json", "registers.json", "faultcodes.json") | ForEach-Object {
         $src = "$ApiSourcePath\$_"
         $dst = "$apiPublishPath\$_"
         if (Test-Path $src) { Copy-Item $src $dst -Force; Write-Info "  Copied: $_" }
