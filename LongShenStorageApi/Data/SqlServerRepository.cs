@@ -15,6 +15,7 @@ public sealed class SqlServerRepository
         EnsureTables();
         SeedDefaultAdmin();
         EnsureBuiltInUser();
+        SeedDefaultSlots();
     }
 
     private void EnsureDatabase()
@@ -635,6 +636,41 @@ public sealed class SqlServerRepository
                 IsActive = true
             });
         }
+    }
+
+    /// <summary>如果库位表为空，插入默认库位和预警设置</summary>
+    private void SeedDefaultSlots()
+    {
+        using var conn = new SqlConnection(_connectionString);
+        conn.Open();
+        using var checkCmd = conn.CreateCommand();
+        checkCmd.CommandText = "SELECT COUNT(*) FROM StorageSlots";
+        var count = (int)checkCmd.ExecuteScalar();
+        if (count > 0) return;
+
+        // 插入默认库位
+        var slots = CreateDefaultSlots();
+        using var cmd = new SqlCommand(@"INSERT INTO StorageSlots (SlotCode, IsOccupied, WorkpieceId, Zone, RowNumber, ColumnNumber, LevelNumber, InternalNumber, IsEnabled) VALUES (@SlotCode, 0, NULL, @Zone, @Row, @Col, @Lev, @IntNum, 1)", conn);
+        cmd.Parameters.Add("@SlotCode", System.Data.SqlDbType.NVarChar, 50);
+        cmd.Parameters.Add("@Zone", System.Data.SqlDbType.NVarChar, 50);
+        cmd.Parameters.Add("@Row", System.Data.SqlDbType.Int);
+        cmd.Parameters.Add("@Col", System.Data.SqlDbType.Int);
+        cmd.Parameters.Add("@Lev", System.Data.SqlDbType.Int);
+        cmd.Parameters.Add("@IntNum", System.Data.SqlDbType.Int);
+        foreach (var slot in slots)
+        {
+            cmd.Parameters["@SlotCode"].Value = slot.SlotCode;
+            cmd.Parameters["@Zone"].Value = slot.Zone;
+            cmd.Parameters["@Row"].Value = slot.RowNumber;
+            cmd.Parameters["@Col"].Value = slot.ColumnNumber;
+            cmd.Parameters["@Lev"].Value = slot.LevelNumber;
+            cmd.Parameters["@IntNum"].Value = slot.InternalNumber;
+            cmd.ExecuteNonQuery();
+        }
+
+        // 插入默认预警设置
+        using var alertCmd = new SqlCommand(@"IF NOT EXISTS (SELECT 1 FROM AlertSettings) INSERT INTO AlertSettings (Id, MinThreshold, MaxThreshold) VALUES (1, 2, 18)", conn);
+        alertCmd.ExecuteNonQuery();
     }
 
     private static string BCryptHash(string password)
