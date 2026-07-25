@@ -269,7 +269,7 @@ async function resetPlc(btn) {
     btn.disabled = false; btn.textContent = '🔧 执行PLC复位';
 }
 </script>
-<!-- 引用 inbound.html 中的弹窗 -->
+
 <script>
 function showPlcTaskModal(t) { document.getElementById('plcTaskTitle').textContent = t; document.getElementById('plcTaskProgress').style.width = '0%'; document.getElementById('plcTaskSteps').innerHTML = ''; document.getElementById('plcTaskLogs').innerHTML = ''; document.getElementById('plcTaskCloseBtn').classList.add('hidden'); document.getElementById('plcTaskModal').classList.remove('hidden'); }
 function addPlcStep(n, name, detail, status) { const icons={done:'✅',active:'⏳',error:'❌',wait:'⏸️'},cls={done:'plc-step-done',active:'plc-step-active',error:'plc-step-error',wait:'plc-step-wait'}; const c=document.getElementById('plcTaskSteps'),d=document.createElement('div'); d.className='plc-step '+(cls[status]||'plc-step-wait'); d.id='plcStep_'+n; d.innerHTML='<span class="plc-step-icon">'+(icons[status]||'⏸️')+'</span><span>'+name+(detail?' — '+detail:'')+'</span>'; c.appendChild(d); c.scrollTop=c.scrollHeight; }
@@ -278,6 +278,27 @@ function addPlcLog(msg) { const c=document.getElementById('plcTaskLogs'); c.inne
 function closePlcTaskModal() { document.getElementById('plcTaskModal').classList.add('hidden'); }
 function closeFaultModal() { document.getElementById('faultModal').classList.add('hidden'); }
 </script>
+
+<!-- PLC任务进度弹窗 -->
+<div class="modal-overlay hidden" id="plcTaskModal">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-header">
+      <span id="plcTaskTitle">📡 PLC任务执行中</span>
+      <span style="color:#999;font-size:18px">⏳</span>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:12px"><div class="progress-bar-bg"><div class="progress-bar-fill" id="plcTaskProgress" style="width:0%"></div></div></div>
+      <div id="plcTaskSteps" style="max-height:300px;overflow-y:auto;font-size:13px;line-height:1.8"></div>
+      <div style="margin-top:12px;border-top:1px solid #e8ecf0;padding-top:10px">
+        <div style="font-size:11px;color:#98a2b3;font-weight:bold">📋 通信日志</div>
+        <div id="plcTaskLogs" style="font-size:11px;color:#667085;max-height:150px;overflow-y:auto;font-family:Consolas,monospace;background:#f5f7fa;padding:8px;border-radius:4px;margin-top:4px;line-height:1.5"></div>
+      </div>
+    </div>
+    <div class="modal-footer" id="plcTaskFooter">
+      <button class="btn btn-primary hidden" id="plcTaskCloseBtn" onclick="closePlcTaskModal()">✅ 关闭</button>
+    </div>
+  </div>
+</div>
 
 <!-- 故障处理弹窗 -->
 <div class="modal-overlay hidden" id="faultModal">
