@@ -5,6 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>上海氢晨库存管理系统</title>
 <link rel="stylesheet" href="css/style.css">
+<script>
+// ===== 登录函数（内嵌在HTML中，不依赖外部JS，确保始终可用）=====
+async function handleLogin() {
+    const username = document.getElementById('loginUser').value.trim();
+    const password = document.getElementById('loginPass').value;
+    if (!username || !password) { alert('请输入用户名和密码'); return; }
+    try {
+        const resp = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        if (!resp.ok) { const err = await resp.json().catch(()=>({})); throw new Error(err.error || '登录失败'); }
+        const data = await resp.json();
+        localStorage.setItem('ls_token', data.token);
+        localStorage.setItem('ls_user', JSON.stringify(data));
+        location.reload();
+    } catch(e) { alert('登录失败: ' + e.message); }
+}
+</script>
 </head>
 <body>
 
