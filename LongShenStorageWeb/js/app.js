@@ -179,11 +179,47 @@ async function loadDashboard() {
         alertEl.style.color = data.isAlert ? '#d92d20' : '#1d2939';
         document.getElementById('headerStatus').textContent = `📥${data.todayInbound}入 · 📤${data.todayOutbound}出 · 🟠${data.occupiedSlots}占用 · 🟢${data.freeSlots}空闲 · ${data.isAlert ? '⚠️' : '✅'}${data.alertStatus}`;
         renderSlotVisual('dashboardSlots', data.slots);
-        const tbody = document.getElementById('recentBody');
-        tbody.innerHTML = (data.recentInventory || []).slice(0,10).map(r =>
-            `<tr><td>${r.palletNumber}</td><td>${r.toolingNumber}</td><td>${r.slotCode}</td><td>${r.lastOperator}</td><td>${formatTime(r.inboundTime)}</td></tr>`
-        ).join('') || '<tr><td colspan="5" class="empty-state">暂无数据</td></tr>';
+        loadDeviceStatus();
     } catch (e) { toast('加载失败: ' + e.message, 'error'); }
+}
+
+async function loadDeviceStatus() {
+    try {
+        const resp = await api('/device/monitor');
+        const el = document.getElementById('deviceStatusBody');
+        if (!el) return;
+        const connected = resp.connected;
+        const state = resp.status?.state ?? 0;
+        const stateMap = { 1: '空闲中', 2: '运行中', 3: '故障中', 4: '暂停中' };
+        const stateText = stateMap[state] || `未知(${state})`;
+        const stateColor = state === 1 ? '#079455' : state === 2 ? '#175cd3' : state === 3 ? '#d92d20' : '#dc6803';
+        el.innerHTML = `
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+                <div style="display:flex;align-items:center;gap:8px;padding:10px;background:#f8f9fc;border-radius:6px">
+                    <span style="font-size:18px">🔌</span>
+                    <div><div style="font-size:11px;color:#98a2b3">连接状态</div>
+                    <div style="font-weight:bold;color:${connected ? '#079455' : '#d92d20'}">${connected ? '✅ 已连接' : '❌ 未连接'}</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;padding:10px;background:#f8f9fc;border-radius:6px">
+                    <span style="font-size:18px">⚙️</span>
+                    <div><div style="font-size:11px;color:#98a2b3">运行状态</div>
+                    <div style="font-weight:bold;color:${stateColor}">${state === 1 ? '🟢' : state === 2 ? '🔵' : state === 3 ? '🔴' : '🟠'} ${stateText}</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;padding:10px;background:#f8f9fc;border-radius:6px">
+                    <span style="font-size:18px">📋</span>
+                    <div><div style="font-size:11px;color:#98a2b3">任务状态</div>
+                    <div style="font-weight:bold;color:#667085">${!connected ? '❓ 未知' : resp.flags?.taskDone === 1 ? '✅ 已完成' : '⏳ 等待中'}</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;padding:10px;background:#f8f9fc;border-radius:6px">
+                    <span style="font-size:18px">⚠️</span>
+                    <div><div style="font-size:11px;color:#98a2b3">故障代码</div>
+                    <div style="font-weight:bold;color:#667085">${!connected ? '❓ 未知' : (resp.status?.errorCode || 0) !== 0 || (resp.status?.errorCodeLow || 0) !== 0 ? '🔴 ' + (resp.status?.errorCode ?? 0) + ':' + (resp.status?.errorCodeLow ?? 0) : '🟢 无故障'}</div></div>
+                </div>
+            </div>`;
+    } catch (e) {
+        const el = document.getElementById('deviceStatusBody');
+        if (el) el.innerHTML = '<div style="color:#98a2b3;text-align:center;padding:12px">⚠️ 设备状态加载失败</div>';
+    }
 }
 
 // ===== 货位可视化 =====

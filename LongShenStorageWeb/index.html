@@ -113,8 +113,10 @@ async function handleLogin() {
       <div class="card"><div class="card-header">🗄️ 库位可视化</div>
         <div class="card-body"><div class="legend"><div class="legend-item"><div class="legend-swatch" style="background:#eafaf1"></div>空闲</div><div class="legend-item"><div class="legend-swatch" style="background:#fde8e8"></div>占用</div></div><div class="slot-visual" id="dashboardSlots"></div></div>
       </div>
-      <div class="card"><div class="card-header">📋 最近入库</div>
-        <div class="card-body"><div class="table-wrap"><table class="data-table"><thead><tr><th>托盘号</th><th>工装号</th><th>货位</th><th>操作人</th><th>时间</th></tr></thead><tbody id="recentBody"></tbody></table></div></div>
+      <div class="card"><div class="card-header">� 设备运行状态</div>
+        <div class="card-body" id="deviceStatusBody" style="font-size:13px">
+          <div class="loading">加载中...</div>
+        </div>
       </div>
     </div>
 
