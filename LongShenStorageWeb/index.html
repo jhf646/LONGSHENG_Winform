@@ -144,6 +144,13 @@ async function handleLogin() {
       <div class="card"><div class="card-header">📋 最近入库</div>
         <div class="card-body"><div class="table-wrap"><table class="data-table"><thead><tr><th>时间</th><th>托盘号</th><th>操作人</th><th>货位</th></tr></thead><tbody id="inboundRecentBody"></tbody></table></div></div>
       </div>
+      <div class="card"><div class="card-header">🔧 PLC复位</div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">当立库处于故障状态(4009=3)时，可发送复位指令清除故障。</p>
+          <button class="btn btn-warning" onclick="resetPlc(this)">🔧 执行PLC复位</button>
+          <div class="reset-result" style="margin-top:8px;font-size:13px;display:none"></div>
+        </div>
+      </div>
     </div>
 
     <!-- 出库 -->
@@ -182,6 +189,13 @@ async function handleLogin() {
       </div>
       <div class="card"><div class="card-header">📋 出库台账</div>
         <div class="card-body"><div class="table-wrap"><table class="data-table"><thead><tr><th>时间</th><th>托盘号</th><th>操作人</th><th>说明</th></tr></thead><tbody id="outboundBody"></tbody></table></div></div>
+      </div>
+      <div class="card"><div class="card-header">🔧 PLC复位</div>
+        <div class="card-body">
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">当立库处于故障状态(4009=3)时，可发送复位指令清除故障。</p>
+          <button class="btn btn-warning" onclick="resetPlc(this)">🔧 执行PLC复位</button>
+          <div class="reset-result" style="margin-top:8px;font-size:13px;display:none"></div>
+        </div>
       </div>
     </div>
 
@@ -375,8 +389,8 @@ async function handleLogin() {
       <div class="card"><div class="card-header">� PLC复位</div>
         <div class="card-body">
           <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">当立库处于故障状态(4009=3)时，可发送复位指令清除故障。</p>
-          <button class="btn btn-warning" onclick="resetPlc()">🔧 执行PLC复位</button>
-          <div id="resetResult" style="margin-top:8px;font-size:13px;display:none"></div>
+          <button class="btn btn-warning" onclick="resetPlc(this)">🔧 执行PLC复位</button>
+          <div class="reset-result" style="margin-top:8px;font-size:13px;display:none"></div>
         </div>
       </div>
 

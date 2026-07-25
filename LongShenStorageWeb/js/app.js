@@ -1070,24 +1070,24 @@ async function resetRolePermissions(role) {
     toast(`🔄 ${role} 已恢复默认权限`, 'success');
 }
 
-// ===== PLC复位 =====
-async function resetPlc() {
+// ===== PLC复位（btn参数支持从任意页面调用） =====
+async function resetPlc(btn) {
     if (!confirm('⚠️ 确定要执行PLC复位吗？\n复位仅应在立库故障状态下使用。')) return;
-    const btn = document.querySelector('.btn-warning');
+    if (!btn) btn = document.querySelector('.btn-warning');
     btn.disabled = true; btn.textContent = '⏳ 复位中...';
-    const el = document.getElementById('resetResult'); el.style.display = 'block';
-    el.innerHTML = '<span style="color:#667085">⏳ 查询PLC状态...</span>';
+    const el = btn.parentElement.querySelector('.reset-result');
+    if (el) { el.style.display = 'block'; el.innerHTML = '<span style="color:#667085">⏳ 查询PLC状态...</span>'; }
     try {
         const resp = await api('/device/reset', { method: 'POST' });
         if (resp.success) {
-            el.innerHTML = `<span style="color:var(--success);font-weight:bold">✅ ${resp.message}</span>`;
+            if (el) el.innerHTML = `<span style="color:var(--success);font-weight:bold">✅ ${resp.message}</span>`;
             toast('✅ 复位成功', 'success');
         } else {
-            el.innerHTML = `<span style="color:var(--warning);font-weight:bold">⚠️ ${resp.message}</span>`;
+            if (el) el.innerHTML = `<span style="color:var(--warning);font-weight:bold">⚠️ ${resp.message}</span>`;
             toast('⚠️ ' + resp.message);
         }
     } catch(e) {
-        el.innerHTML = `<span style="color:var(--danger)">❌ 复位失败: ${e.message}</span>`;
+        if (el) el.innerHTML = `<span style="color:var(--danger)">❌ 复位失败: ${e.message}</span>`;
         toast('❌ 复位失败: ' + e.message, 'error');
     }
     btn.disabled = false; btn.textContent = '🔧 执行PLC复位';
