@@ -62,6 +62,9 @@ function initPage(pageId, pageTitle) {
     // 启动时钟
     updateClock();
     setInterval(updateClock, 1000);
+    
+    // 更新顶部状态
+    updateHeaderStatus();
 }
 
 function updateClock() {
@@ -88,4 +91,13 @@ function formatPalletInput(el) {
     const digits = el.value.replace(/\D/g, '');
     if (digits.length > 0 && digits.length <= 3) { el.value = digits.padStart(3, '0'); }
     else if (digits.length > 3) { el.value = digits.slice(-3).padStart(3, '0'); }
+}
+
+// 更新顶部状态栏
+async function updateHeaderStatus() {
+    try {
+        const data = await api('/appstate/dashboard');
+        const el = document.getElementById('headerStatus');
+        if (el) el.textContent = `📥${data.todayInbound}入 · 📤${data.todayOutbound}出 · 🟠${data.occupiedSlots}占用 · 🟢${data.freeSlots}空闲 · ${data.isAlert ? '⚠️' : '✅'}${data.alertStatus}`;
+    } catch(e) { /* ignore */ }
 }
