@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>氢晨库存管理系统 - 台账查询</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="js/shared.js"></script>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo"><div class="logo-icon" style="background:transparent;width:auto;height:auto;font-size:22px">🏭</div><div class="logo-text">氢晨科技<small>库存管理系统</small></div></div>
+  <nav class="sidebar-nav">
+    <a class="nav-item" href="index.html"><span class="nav-icon">📊</span>仪表盘</a>
+    <a class="nav-item perm-write" href="inbound.html"><span class="nav-icon">📥</span>入库管理</a>
+    <a class="nav-item perm-write" href="outbound.html"><span class="nav-icon">📤</span>出库管理</a>
+    <a class="nav-item" href="slots.html"><span class="nav-icon">🗄️</span>货位管理</a>
+    <a class="nav-item active" href="ledger.html"><span class="nav-icon">📋</span>台账查询</a>
+    <a class="nav-item" href="report.html"><span class="nav-icon">📈</span>报表统计</a>
+    <a class="nav-item perm-write" href="alert.html"><span class="nav-icon">⚠️</span>库存预警</a>
+    <a class="nav-item" href="devmonitor.html"><span class="nav-icon">📡</span>设备监控</a>
+    <a class="nav-item perm-write" href="devcontrol.html"><span class="nav-icon">🎮</span>设备调用</a>
+    <a class="nav-item perm-admin" href="users.html"><span class="nav-icon">👥</span>用户管理</a>
+    <a class="nav-item perm-admin" href="roles.html"><span class="nav-icon">🔐</span>角色权限</a>
+  </nav>
+  <div class="sidebar-footer"><div class="user-info"><div class="user-avatar" id="sidebarAvatar">U</div><div><div class="user-name" id="sidebarUserName">未登录</div><div class="user-role" id="sidebarUserRole">-</div></div></div><button class="logout-btn" onclick="logout()">退出登录</button></div>
+</div>
+<div class="main">
+  <div class="topbar"><div class="topbar-title" id="pageTitle">台账查询</div><div class="topbar-right"><span class="topbar-clock" id="topbarClock"></span><span class="topbar-divider">|</span><span class="topbar-status" id="headerStatus">-</span><img src="logo.jpg" alt="氢晨" class="topbar-logo"></div></div>
+  <div class="content">
+    <div class="card"><div class="card-header">🔍 查询条件</div>
+      <div class="card-body">
+        <div class="search-bar">
+          <div class="form-group"><label>类型</label><select id="ledgerType"><option value="">全部</option><option value="0">入库</option><option value="1">出库</option></select></div>
+          <div class="form-group"><label>托盘号</label><input id="ledgerPallet"></div>
+          <div class="form-group"><label>工单号</label><input id="ledgerWorkOrder"></div>
+          <div class="form-group"><label>操作人</label><input id="ledgerOperator"></div>
+          <div class="form-group"><label>开始</label><input type="datetime-local" id="ledgerStart"></div>
+          <div class="form-group"><label>结束</label><input type="datetime-local" id="ledgerEnd"></div>
+        </div>
+        <div class="btn-group"><button class="btn btn-primary" onclick="queryLedger()">🔍 查询</button><button class="btn" onclick="resetLedger()">🔄 重置</button></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-header">📋 进出台账</div>
+      <div class="card-body"><div class="table-wrap" style="max-height:500px"><table class="data-table"><thead><tr><th>时间</th><th>类型</th><th>托盘号</th><th>工单号</th><th>操作人</th><th>货位</th><th>说明</th></tr></thead><tbody id="ledgerBody"></tbody></table></div></div>
+    </div>
+  </div>
+</div>
+<script>
+initPage('ledger', '台账查询');
+const now = new Date();
+document.getElementById('ledgerStart').value = new Date(now.getTime() - 7*86400000).toISOString().slice(0,16);
+document.getElementById('ledgerEnd').value = now.toISOString().slice(0,16);
+queryLedger();
+
+async function queryLedger() {
+    try {
+        const payload = {
+            type: document.getElementById('ledgerType').value ? parseInt(document.getElementById('ledgerType').value) : null,
+            palletNumber: document.getElementById('ledgerPallet').value.trim() || null,
+            workOrder: document.getElementById('ledgerWorkOrder').value.trim() || null,
+            operatorName: document.getElementById('ledgerOperator').value.trim() || null,
+            startTime: document.getElementById('ledgerStart').value ? new Date(document.getElementById('ledgerStart').value).toISOString() : null,
+            endTime: document.getElementById('ledgerEnd').value ? new Date(document.getElementById('ledgerEnd').value).toISOString() : null
+        };
+        const entries = await api('/ledgerentries/query', { method: 'POST', body: JSON.stringify(payload) });
+        document.getElementById('ledgerBody').innerHTML = entries.map(e => '<tr><td>' + formatTime(e.timestamp) + '</td><td><span class="badge ' + (e.type === 0 ? 'badge-admin' : 'badge-inactive') + '">' + (e.type === 0 ? '入库' : '出库') + '</span></td><td>' + e.palletNumber + '</td><td>' + e.workOrder + '</td><td>' + e.operatorName + '</td><td>' + e.slotCode + '</td><td>' + e.actionDescription + '</td></tr>').join('') || '<tr><td colspan="7" class="empty-state">无匹配记录</td></tr>';
+    } catch(e) { toast('查询失败', 'error'); }
+}
+function resetLedger() {
+    document.getElementById('ledgerType').value = '';
+    ['ledgerPallet','ledgerWorkOrder','ledgerOperator'].forEach(id => document.getElementById(id).value = '');
+    const n = new Date();
+    document.getElementById('ledgerStart').value = new Date(n.getTime() - 7*86400000).toISOString().slice(0,16);
+    document.getElementById('ledgerEnd').value = n.toISOString().slice(0,16);
+    queryLedger();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>氢晨库存管理系统 - 登录</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+    font-family: 'Microsoft YaHei UI', -apple-system, 'Segoe UI', sans-serif;
+    background: #f5f7fa;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.login-container {
+    display: flex;
+    align-items: center;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 40px rgba(0,0,0,0.08);
+    overflow: hidden;
+    max-width: 900px;
+    width: 100%;
+    margin: 20px;
+}
+.login-left {
+    flex: 1;
+    padding: 60px 48px;
+    background: linear-gradient(160deg, #0d2e4e 0%, #1a4a7a 100%);
+    color: white;
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.login-logo-area { width: 100px; height: 100px; margin-bottom: 28px; background: white; border-radius: 16px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.login-logo-img { width: 80px; height: 80px; object-fit: contain; }
+.login-left-title { font-size: 28px; font-weight: bold; margin-bottom: 6px; }
+.login-left-sub { font-size: 14px; opacity: 0.7; margin-bottom: 20px; letter-spacing: 1px; }
+.login-left-desc { font-size: 14px; line-height: 1.8; opacity: 0.8; }
+.login-right { flex: 1; padding: 60px 48px; display: flex; flex-direction: column; }
+.login-card-title { font-size: 24px; font-weight: bold; color: #1d2939; margin-bottom: 4px; }
+.login-card-sub { font-size: 14px; color: #667085; margin-bottom: 32px; }
+.login-input-wrap { margin-bottom: 20px; }
+.login-input-label { font-size: 13px; font-weight: 600; color: #344054; margin-bottom: 6px; }
+.login-input-wrap input {
+    width: 100%; padding: 12px 14px; font-size: 15px;
+    border: 1px solid #d0d5dd; border-radius: 8px; outline: none;
+    transition: border-color 0.2s; background: #f9fafb;
+}
+.login-input-wrap input:focus { border-color: #1a4a7a; background: white; box-shadow: 0 0 0 3px rgba(26,74,122,0.1); }
+.login-action-btn {
+    width: 100%; padding: 12px; font-size: 16px; font-weight: bold;
+    background: #1a4a7a; color: white; border: none; border-radius: 8px;
+    cursor: pointer; transition: background 0.2s; margin-top: 8px;
+}
+.login-action-btn:hover { background: #0d2e4e; }
+.login-action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.error-msg { color: #d92d20; font-size: 13px; margin-top: 12px; text-align: center; display: none; }
+@media (max-width: 768px) {
+    .login-container { flex-direction: column; }
+    .login-left { min-height: auto; padding: 40px 32px; }
+    .login-right { padding: 40px 32px; }
+}
+</style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="login-left">
+    <div class="login-logo-area">
+      <img src="logo.jpg" alt="氢晨" class="login-logo-img">
+    </div>
+    <div class="login-left-title">氢晨库存管理系统</div>
+    <div class="login-left-sub">Hydrogen Star WMS</div>
+    <div class="login-left-desc">智能仓储管理平台，支持入库出库管理、货位可视化、设备监控、数据报表等全流程管理功能。</div>
+  </div>
+  <div class="login-right">
+    <div class="login-card-title">欢迎回来</div>
+    <div class="login-card-sub">请登录您的账号</div>
+    <div class="login-input-wrap">
+      <div class="login-input-label">用户名</div>
+      <input type="text" id="loginUser" placeholder="请输入用户名" autofocus>
+    </div>
+    <div class="login-input-wrap">
+      <div class="login-input-label">密码</div>
+      <input type="password" id="loginPass" placeholder="请输入密码" onkeydown="if(event.key==='Enter')handleLogin()">
+    </div>
+    <button class="login-action-btn" id="loginBtn" onclick="handleLogin()">登 录</button>
+    <div class="error-msg" id="loginError"></div>
+  </div>
+</div>
+
+<script>
+const API_BASE = 'http://localhost:5000/api';
+
+async function handleLogin() {
+    const username = document.getElementById('loginUser').value.trim();
+    const password = document.getElementById('loginPass').value;
+    const btn = document.getElementById('loginBtn');
+    const errEl = document.getElementById('loginError');
+
+    if (!username || !password) {
+        errEl.textContent = '请输入用户名和密码';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = '⏳ 登录中...';
+
+    try {
+        const resp = await fetch(API_BASE + '/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        if (!resp.ok) {
+            const err = await resp.json().catch(() => ({}));
+            throw new Error(err.error || '登录失败');
+        }
+        const data = await resp.json();
+        localStorage.setItem('ls_token', data.token);
+        localStorage.setItem('ls_user', JSON.stringify(data));
+        window.location.href = 'index.html';
+    } catch(e) {
+        errEl.textContent = '登录失败: ' + e.message;
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '登 录';
+    }
+}
+</script>
+</body>
+</html>

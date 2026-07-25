@@ -1,0 +1,27 @@
+<!-- 侧边栏模板 - 各页面通过 SSI 或手动引入 -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon" style="background:transparent;width:auto;height:auto;font-size:22px">🏭</div>
+    <div class="logo-text">氢晨科技<small>库存管理系统</small></div>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-item {dashboard}" href="index.html"><span class="nav-icon">📊</span>仪表盘</a>
+    <a class="nav-item perm-write {inbound}" href="inbound.html"><span class="nav-icon">📥</span>入库管理</a>
+    <a class="nav-item perm-write {outbound}" href="outbound.html"><span class="nav-icon">📤</span>出库管理</a>
+    <a class="nav-item {slots}" href="slots.html"><span class="nav-icon">🗄️</span>货位管理</a>
+    <a class="nav-item {ledger}" href="ledger.html"><span class="nav-icon">📋</span>台账查询</a>
+    <a class="nav-item {report}" href="report.html"><span class="nav-icon">📈</span>报表统计</a>
+    <a class="nav-item perm-write {alert}" href="alert.html"><span class="nav-icon">⚠️</span>库存预警</a>
+    <a class="nav-item {devmonitor}" href="devmonitor.html"><span class="nav-icon">📡</span>设备监控</a>
+    <a class="nav-item perm-write {devcontrol}" href="devcontrol.html"><span class="nav-icon">🎮</span>设备调用</a>
+    <a class="nav-item perm-admin {users}" href="users.html"><span class="nav-icon">👥</span>用户管理</a>
+    <a class="nav-item perm-admin {roles}" href="roles.html"><span class="nav-icon">🔐</span>角色权限</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar" id="sidebarAvatar">U</div>
+      <div><div class="user-name" id="sidebarUserName">未登录</div><div class="user-role" id="sidebarUserRole">-</div></div>
+    </div>
+    <button class="logout-btn" onclick="logout()">退出登录</button>
+  </div>
+</div>

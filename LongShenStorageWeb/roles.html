@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>氢晨库存管理系统 - 角色权限</title>
+<link rel="stylesheet" href="css/style.css"><script src="js/shared.js"></script>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo"><div class="logo-icon" style="background:transparent;width:auto;height:auto;font-size:22px">🏭</div><div class="logo-text">氢晨科技<small>库存管理系统</small></div></div>
+  <nav class="sidebar-nav">
+    <a class="nav-item" href="index.html"><span class="nav-icon">📊</span>仪表盘</a>
+    <a class="nav-item perm-write" href="inbound.html"><span class="nav-icon">📥</span>入库管理</a>
+    <a class="nav-item perm-write" href="outbound.html"><span class="nav-icon">📤</span>出库管理</a>
+    <a class="nav-item" href="slots.html"><span class="nav-icon">🗄️</span>货位管理</a>
+    <a class="nav-item" href="ledger.html"><span class="nav-icon">📋</span>台账查询</a>
+    <a class="nav-item" href="report.html"><span class="nav-icon">📈</span>报表统计</a>
+    <a class="nav-item perm-write" href="alert.html"><span class="nav-icon">⚠️</span>库存预警</a>
+    <a class="nav-item" href="devmonitor.html"><span class="nav-icon">📡</span>设备监控</a>
+    <a class="nav-item perm-write" href="devcontrol.html"><span class="nav-icon">🎮</span>设备调用</a>
+    <a class="nav-item perm-admin" href="users.html"><span class="nav-icon">👥</span>用户管理</a>
+    <a class="nav-item perm-admin active" href="roles.html"><span class="nav-icon">🔐</span>角色权限</a>
+  </nav>
+  <div class="sidebar-footer"><div class="user-info"><div class="user-avatar" id="sidebarAvatar">U</div><div><div class="user-name" id="sidebarUserName">-</div><div class="user-role" id="sidebarUserRole">-</div></div></div><button class="logout-btn" onclick="logout()">退出登录</button></div>
+</div>
+<div class="main">
+  <div class="topbar"><div class="topbar-title" id="pageTitle">角色权限</div><div class="topbar-right"><span class="topbar-clock" id="topbarClock"></span><span class="topbar-divider">|</span><span class="topbar-status" id="headerStatus">-</span><img src="logo.jpg" alt="氢晨" class="topbar-logo"></div></div>
+  <div class="content">
+    <div class="card"><div class="card-header">🔐 角色权限管理 <span style="font-weight:normal;font-size:12px;color:var(--text-secondary)">(管理员)</span></div>
+      <div class="card-body" id="rolePermissionsContainer"><div class="loading">加载中...</div></div>
+    </div>
+  </div>
+</div>
+<script>
+initPage('roles', '角色权限');
+let rolePermissionCache = {};
+loadRolePage();
+
+async function loadRolePage() {
+    try {
+        const roles = await api('/roles');
+        rolePermissionCache = {};
+        const container = document.getElementById('rolePermissionsContainer');
+        container.innerHTML = roles.map(r => {
+            rolePermissionCache[r.role] = r.allowedPages || [];
+            const pages = r.allPages || [];
+            return '<div class="card" style="margin-bottom:12px"><div class="card-header" style="font-size:14px">' + r.roleDisplayName + ' <span style="font-weight:normal;color:var(--text-secondary)">(' + r.role + ')</span></div><div class="card-body"><div style="display:flex;flex-wrap:wrap;gap:10px" id="rolePages_' + r.role + '">' + pages.map(p => '<label style="display:flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:' + (p.allowed ? '#e8f0fe' : '#f9fafb') + '" onclick="toggleRolePage(\'' + r.role + '\',\'' + p.id + '\',this)"><input type="checkbox" ' + (p.allowed ? 'checked' : '') + ' style="width:16px;height:16px"><span style="font-size:13px">' + p.name + '</span></label>').join('') + '</div><div class="btn-group"><button class="btn btn-primary btn-sm" onclick="saveRolePermissions(\'' + r.role + '\')">💾 保存 ' + r.roleDisplayName + '</button><button class="btn btn-sm" onclick="resetRolePermissions(\'' + r.role + '\')">🔄 恢复默认</button></div></div></div>';
+        }).join('');
+    } catch(e) { document.getElementById('rolePermissionsContainer').innerHTML = '<div class="empty-state">加载失败: ' + e.message + '</div>'; }
+}
+function toggleRolePage(role, pageId, labelEl) {
+    if (!rolePermissionCache[role]) rolePermissionCache[role] = [];
+    const checkbox = labelEl.querySelector('input');
+    if (checkbox.checked) { if (!rolePermissionCache[role].includes(pageId)) rolePermissionCache[role].push(pageId); }
+    else { rolePermissionCache[role] = rolePermissionCache[role].filter(p => p !== pageId); }
+    labelEl.style.background = checkbox.checked ? '#e8f0fe' : '#f9fafb';
+}
+async function saveRolePermissions(role) {
+    const pages = rolePermissionCache[role] || [];
+    try { await api('/roles/' + role, { method: 'POST', body: JSON.stringify({ role, pages }) }); toast('✅ ' + role + ' 权限已保存', 'success'); } catch(e) { toast('❌ 保存失败: ' + e.message, 'error'); }
+}
+async function resetRolePermissions(role) {
+    const defaults = { Admin: ['dashboard','inbound','outbound','slots','ledger','report','alert','users','devmonitor','devcontrol','roles'], Operator: ['dashboard','inbound','outbound','slots','ledger','report','alert','devmonitor','devcontrol'], Viewer: ['dashboard','slots','ledger','report'] };
+    rolePermissionCache[role] = defaults[role] || [];
+    loadRolePage();
+    toast('🔄 ' + role + ' 已恢复默认权限', 'success');
+}
+</script>
+</body>
+</html>

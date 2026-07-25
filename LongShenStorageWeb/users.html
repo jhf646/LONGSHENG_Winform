@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>氢晨库存管理系统 - 用户管理</title>
+<link rel="stylesheet" href="css/style.css"><script src="js/shared.js"></script>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo"><div class="logo-icon" style="background:transparent;width:auto;height:auto;font-size:22px">🏭</div><div class="logo-text">氢晨科技<small>库存管理系统</small></div></div>
+  <nav class="sidebar-nav">
+    <a class="nav-item" href="index.html"><span class="nav-icon">📊</span>仪表盘</a>
+    <a class="nav-item perm-write" href="inbound.html"><span class="nav-icon">📥</span>入库管理</a>
+    <a class="nav-item perm-write" href="outbound.html"><span class="nav-icon">📤</span>出库管理</a>
+    <a class="nav-item" href="slots.html"><span class="nav-icon">🗄️</span>货位管理</a>
+    <a class="nav-item" href="ledger.html"><span class="nav-icon">📋</span>台账查询</a>
+    <a class="nav-item" href="report.html"><span class="nav-icon">📈</span>报表统计</a>
+    <a class="nav-item perm-write" href="alert.html"><span class="nav-icon">⚠️</span>库存预警</a>
+    <a class="nav-item" href="devmonitor.html"><span class="nav-icon">📡</span>设备监控</a>
+    <a class="nav-item perm-write" href="devcontrol.html"><span class="nav-icon">🎮</span>设备调用</a>
+    <a class="nav-item perm-admin active" href="users.html"><span class="nav-icon">👥</span>用户管理</a>
+    <a class="nav-item perm-admin" href="roles.html"><span class="nav-icon">🔐</span>角色权限</a>
+  </nav>
+  <div class="sidebar-footer"><div class="user-info"><div class="user-avatar" id="sidebarAvatar">U</div><div><div class="user-name" id="sidebarUserName">-</div><div class="user-role" id="sidebarUserRole">-</div></div></div><button class="logout-btn" onclick="logout()">退出登录</button></div>
+</div>
+<div class="main">
+  <div class="topbar"><div class="topbar-title" id="pageTitle">用户管理</div><div class="topbar-right"><span class="topbar-clock" id="topbarClock"></span><span class="topbar-divider">|</span><span class="topbar-status" id="headerStatus">-</span><img src="logo.jpg" alt="氢晨" class="topbar-logo"></div></div>
+  <div class="content">
+    <div class="card"><div class="card-header">👥 用户管理 <span style="font-weight:normal;font-size:12px;color:var(--text-secondary)">(管理员)</span></div>
+      <div class="card-body">
+        <div style="text-align:right;margin-bottom:12px"><button class="btn btn-primary" onclick="showCreateUserModal()">➕ 新建用户</button></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>用户名</th><th>显示名称</th><th>角色</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead><tbody id="userTableBody"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- 用户编辑弹窗 -->
+<div class="modal-overlay hidden" id="userModal">
+  <div class="modal-box">
+    <div class="modal-header"><span id="modalTitle">新建用户</span><a href="javascript:closeUserModal()" style="text-decoration:none;color:#999">✕</a></div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:14px"><label>用户名</label><input type="text" id="mUsername"></div>
+      <div class="form-group" style="margin-bottom:14px"><label>密码</label><input type="password" id="mPassword" placeholder="新建必填，编辑留空不修改"></div>
+      <div class="form-group" style="margin-bottom:14px"><label>显示名称</label><input type="text" id="mDisplayName"></div>
+      <div class="form-group" style="margin-bottom:14px"><label>角色</label><select id="mRole"><option value="Admin">管理员</option><option value="Operator" selected>操作员</option><option value="Viewer">查看员</option></select></div>
+      <div class="form-group" style="margin-bottom:8px"><label><input type="checkbox" id="mIsActive" checked> 启用</label></div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeUserModal()">取消</button><button class="btn btn-primary" onclick="saveUser()">保存</button></div>
+  </div>
+</div>
+<script>
+initPage('users', '用户管理');
+let editingUserId = null;
+loadUserList();
+
+async function loadUserList() {
+    try {
+        const users = await api('/auth/users');
+        const roleMap = { Admin: '管理员', Operator: '操作员', Viewer: '查看员' };
+        document.getElementById('userTableBody').innerHTML = users.map(u => '<tr><td><strong>' + u.username + '</strong></td><td>' + u.displayName + '</td><td><span class="badge badge-' + u.role.toLowerCase() + '">' + (roleMap[u.role] || u.role) + '</span></td><td><span class="badge ' + (u.isActive ? 'badge-active' : 'badge-inactive') + '">' + (u.isActive ? '启用' : '停用') + '</span></td><td>' + formatTime(u.createdAt) + '</td><td>' + (u.id === BUILT_IN_USER_ID ? '<span style="color:#98a2b3;font-size:12px">🔒 内置账号</span>' : '<button class="btn btn-sm btn-warning" onclick="editUser(\'' + u.id + '\',\'' + encodeURIComponent(u.username) + '\',\'' + encodeURIComponent(u.displayName) + '\',\'' + u.role + '\',\'' + u.isActive + '\')">✏️ 编辑</button> <button class="btn btn-sm btn-danger" onclick="deleteUser(\'' + u.id + '\')">🗑️ 删除</button>') + '</td></tr>').join('');
+    } catch(e) { document.getElementById('userTableBody').innerHTML = '<tr><td colspan="6" class="empty-state">加载失败: ' + e.message + '</td></tr>'; }
+}
+function showCreateUserModal() {
+    editingUserId = null;
+    document.getElementById('modalTitle').textContent = '新建用户';
+    document.getElementById('mUsername').value = ''; document.getElementById('mUsername').disabled = false;
+    document.getElementById('mPassword').value = ''; document.getElementById('mPassword').required = true;
+    document.getElementById('mDisplayName').value = ''; document.getElementById('mRole').value = 'Operator';
+    document.getElementById('mIsActive').checked = true;
+    document.getElementById('userModal').classList.remove('hidden');
+}
+function editUser(id, username, displayName, role, isActive) {
+    editingUserId = id;
+    document.getElementById('modalTitle').textContent = '编辑用户 - ' + decodeURIComponent(username);
+    document.getElementById('mUsername').value = decodeURIComponent(username); document.getElementById('mUsername').disabled = true;
+    document.getElementById('mPassword').value = ''; document.getElementById('mPassword').required = false;
+    document.getElementById('mDisplayName').value = decodeURIComponent(displayName);
+    document.getElementById('mRole').value = role; document.getElementById('mIsActive').checked = String(isActive).toLowerCase() === 'true';
+    document.getElementById('userModal').classList.remove('hidden');
+}
+async function saveUser() {
+    const username = document.getElementById('mUsername').value.trim();
+    const password = document.getElementById('mPassword').value;
+    const displayName = document.getElementById('mDisplayName').value.trim() || username;
+    const role = document.getElementById('mRole').value;
+    const isActive = document.getElementById('mIsActive').checked;
+    if (!username) { toast('用户名不能为空', 'error'); return; }
+    try {
+        if (editingUserId) {
+            await api('/auth/users/' + editingUserId, { method: 'PUT', body: JSON.stringify({ displayName, role, isActive }) });
+            if (password) await api('/auth/users/' + editingUserId + '/password', { method: 'PUT', body: JSON.stringify({ newPassword: password }) });
+            toast('✅ 用户已更新', 'success');
+        } else {
+            if (!password) { toast('密码不能为空', 'error'); return; }
+            await api('/auth/create-user', { method: 'POST', body: JSON.stringify({ username, password, displayName, role }) });
+            toast('✅ 用户已创建', 'success');
+        }
+        document.getElementById('userModal').classList.add('hidden');
+        loadUserList();
+    } catch(e) { toast('❌ ' + e.message, 'error'); }
+}
+async function deleteUser(id) { if (!confirm('确定删除此用户？')) return; try { await api('/auth/users/' + id, { method: 'DELETE' }); toast('✅ 用户已删除', 'success'); loadUserList(); } catch(e) { toast('❌ ' + e.message, 'error'); } }
+function closeUserModal() { document.getElementById('userModal').classList.add('hidden'); }
+</script>
+</body>
+</html>

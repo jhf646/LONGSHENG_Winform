@@ -31,7 +31,7 @@ body {
 /* ===== 侧边栏 ===== */
 .sidebar {
     width: var(--sidebar-w); min-height: 100vh; background: var(--sidebar-bg);
-    display: flex; flex-direction: column; position: fixed; left: 0; top: 0; z-index: 100;
+    display: none; flex-direction: column; position: fixed; left: 0; top: 0; z-index: 100;
 }
 .sidebar-logo {
     padding: 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
@@ -75,7 +75,7 @@ body {
 .sidebar-footer .logout-btn:hover { background: rgba(255,255,255,0.15); color: white; }
 
 /* ===== 主内容 ===== */
-.main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; }
+.main { margin-left: var(--sidebar-w); flex: 1; min-height: 100vh; display: none; }
 .topbar {
     height: var(--header-h); background: var(--card); border-bottom: 1px solid var(--border);
     display: flex; align-items: center; justify-content: space-between;
@@ -153,94 +153,7 @@ body {
 }
 .form-group textarea { min-height: 60px; resize: vertical; }
 
-/* ===== 登录页 ===== */
-.login-page {
-    position: fixed; inset: 0; z-index: 9999;
-    background: #f5f7fa;
-    display: flex; align-items: center; justify-content: center;
-}
-.login-container {
-    display: flex; align-items: center; gap: 0;
-    background: white; border-radius: 20px;
-    box-shadow: 0 4px 40px rgba(0,0,0,0.08);
-    overflow: hidden; max-width: 900px; width: 100%;
-    margin: 20px;
-}
-
-/* 左侧品牌区 */
-.login-left {
-    flex: 1; padding: 60px 48px;
-    background: linear-gradient(160deg, #0d2e4e 0%, #1a4a7a 100%);
-    color: white; min-height: 500px;
-    display: flex; flex-direction: column; justify-content: center;
-}
-.login-logo-area {
-    width: 100px; height: 100px; margin-bottom: 28px;
-    background: white; border-radius: 16px;
-    display: flex; align-items: center; justify-content: center;
-    padding: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-}
-.login-logo-img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.login-left-title { font-size: 26px; font-weight: bold; letter-spacing: 2px; margin-bottom: 6px; }
-.login-left-sub { font-size: 13px; color: rgba(255,255,255,0.5); letter-spacing: 1px; margin-bottom: 20px; }
-.login-left-desc { font-size: 14px; color: rgba(255,255,255,0.65); line-height: 1.7; max-width: 320px; }
-
-/* 右侧登录区 */
-.login-right {
-    width: 420px; padding: 40px 44px;
-    position: relative;
-}
-.login-right-top {
-    position: absolute; top: 24px; right: 28px;
-    font-size: 12px; color: #98a2b3;
-}
-.login-right-top a { color: #1a4a7a; text-decoration: none; font-weight: 600; }
-.login-card-title { font-size: 24px; font-weight: bold; color: #1d2939; margin-bottom: 4px; }
-.login-card-sub { font-size: 14px; color: #98a2b3; margin-bottom: 32px; }
-
-.login-input-wrap { margin-bottom: 20px; }
-.login-input-label {
-    font-size: 13px; font-weight: 600; color: #344054;
-    margin-bottom: 6px;
-}
-.login-input-wrap input {
-    width: 100%; padding: 11px 14px; font-size: 14px;
-    border: 1.5px solid #e0e4e8; border-radius: 8px;
-    outline: none; font-family: inherit; background: #fafbfc;
-    transition: all 0.2s; box-sizing: border-box;
-}
-.login-input-wrap input:focus {
-    border-color: #1a4a7a; background: white;
-    box-shadow: 0 0 0 3px rgba(26,74,122,0.08);
-}
-
-.login-action-btn {
-    width: 100%; padding: 12px; margin-top: 8px;
-    background: #1a4a7a; color: white; border: none;
-    border-radius: 8px; font-size: 15px; font-weight: bold;
-    cursor: pointer; font-family: inherit;
-    transition: all 0.2s;
-}
-.login-action-btn:hover { background: #0d2e4e; }
-.login-action-btn:active { transform: scale(0.98); }
-
-.login-demo-accounts {
-    margin-top: 20px; padding: 12px 14px;
-    background: #f8f9fc; border-radius: 8px;
-    font-size: 12px; color: #98a2b3; line-height: 1.8;
-}
-.login-demo-accounts code {
-    background: #e8ecf0; padding: 1px 6px; border-radius: 3px;
-    font-size: 11px; color: #1a4a7a; font-weight: 600;
-}
-
-@media (max-width: 780px) {
-    .login-container { flex-direction: column; max-width: 440px; }
-    .login-left { padding: 40px 32px; min-height: auto; align-items: center; text-align: center; }
-    .login-left-desc { max-width: 100%; }
-    .login-right { width: 100%; padding: 32px 28px; }
-    .login-right-top { position: static; text-align: right; margin-bottom: 16px; }
-}
+/* ===== 登录页样式已移至 login.html ===== */
 
 /* ===== 按钮 ===== */
 .btn {

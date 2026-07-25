@@ -1,5 +1,5 @@
 // ===== 氢晨库存管理系统 Web v3 =====
-const API_BASE = window.location.origin + '/api';
+// API地址（已在 index.html 中定义，直接使用）
 let authToken = localStorage.getItem('ls_token') || '';
 let currentUser = null;
 try { currentUser = JSON.parse(localStorage.getItem('ls_user') || 'null'); } catch(e) { localStorage.removeItem('ls_user'); }
@@ -34,38 +34,11 @@ function toast(msg, type = '') {
 function formatTime(d) { return new Date(d).toLocaleString('zh-CN', { hour12: false }); }
 function hasRole(...roles) { return currentUser && roles.includes(currentUser.role); }
 
-// ===== 登录/登出 =====
-function showLogin() {
-    document.getElementById('loginPage').style.display = 'flex';
-    document.querySelector('.sidebar').style.display = 'none';
-    document.querySelector('.main').style.display = 'none';
-}
-function hideLogin() {
-    document.getElementById('loginPage').style.display = 'none';
-    document.querySelector('.sidebar').style.display = 'flex';
-    document.querySelector('.main').style.display = 'block';
-}
+// ===== 登出 =====
 function logout() {
     authToken = ''; currentUser = null;
     localStorage.removeItem('ls_token'); localStorage.removeItem('ls_user');
-    showLogin(); document.getElementById('sidebarUserName').textContent = '未登录';
-}
-
-async function handleLogin() {
-    const username = document.getElementById('loginUser').value.trim();
-    const password = document.getElementById('loginPass').value;
-    if (!username || !password) { toast('请输入用户名和密码', 'error'); return; }
-    try {
-        const resp = await api('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
-        authToken = resp.token; currentUser = resp;
-        localStorage.setItem('ls_token', resp.token);
-        localStorage.setItem('ls_user', JSON.stringify(resp));
-        hideLogin();
-        updateUserUI();
-        applyPagePermissions();
-        await initApp();
-        toast(`欢迎, ${resp.displayName}`, 'success');
-    } catch (e) { toast('登录失败: ' + e.message, 'error'); }
+    window.location.href = 'login.html';
 }
 
 function updateUserUI() {
@@ -139,16 +112,24 @@ async function initApp() {
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         if (authToken && currentUser) {
-            hideLogin();
+            // 移除预加载隐藏样式
+            const s = document.getElementById('preload-style');
+            if (s) s.remove();
+            // 显示侧边栏和主内容
+            document.querySelector('.sidebar').style.display = 'flex';
+            document.querySelector('.main').style.display = 'block';
             updateUserUI();
             applyPagePermissions();
             await initApp();
         } else {
-            showLogin();
+            // 未登录：跳转到独立登录页
+            window.location.href = 'login.html';
+            return;
         }
     } catch(e) {
         console.error('初始化异常:', e);
-        showLogin();
+        window.location.href = 'login.html';
+        return;
     }
     // 启动时钟
     updateClock();

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>氢晨库存管理系统 - 货位管理</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="js/shared.js"></script>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon" style="background:transparent;width:auto;height:auto;font-size:22px">🏭</div>
+    <div class="logo-text">氢晨科技<small>库存管理系统</small></div>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-item" href="index.html"><span class="nav-icon">📊</span>仪表盘</a>
+    <a class="nav-item perm-write" href="inbound.html"><span class="nav-icon">📥</span>入库管理</a>
+    <a class="nav-item perm-write" href="outbound.html"><span class="nav-icon">📤</span>出库管理</a>
+    <a class="nav-item active" href="slots.html"><span class="nav-icon">🗄️</span>货位管理</a>
+    <a class="nav-item" href="ledger.html"><span class="nav-icon">📋</span>台账查询</a>
+    <a class="nav-item" href="report.html"><span class="nav-icon">📈</span>报表统计</a>
+    <a class="nav-item perm-write" href="alert.html"><span class="nav-icon">⚠️</span>库存预警</a>
+    <a class="nav-item" href="devmonitor.html"><span class="nav-icon">📡</span>设备监控</a>
+    <a class="nav-item perm-write" href="devcontrol.html"><span class="nav-icon">🎮</span>设备调用</a>
+    <a class="nav-item perm-admin" href="users.html"><span class="nav-icon">👥</span>用户管理</a>
+    <a class="nav-item perm-admin" href="roles.html"><span class="nav-icon">🔐</span>角色权限</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar" id="sidebarAvatar">U</div>
+      <div><div class="user-name" id="sidebarUserName">未登录</div><div class="user-role" id="sidebarUserRole">-</div></div>
+    </div>
+    <button class="logout-btn" onclick="logout()">退出登录</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="pageTitle">货位管理</div>
+    <div class="topbar-right">
+      <span class="topbar-clock" id="topbarClock"></span>
+      <span class="topbar-divider">|</span>
+      <span class="topbar-status" id="headerStatus">-</span>
+      <img src="logo.jpg" alt="氢晨" class="topbar-logo">
+    </div>
+  </div>
+  <div class="content">
+
+    <div class="card"><div class="card-header">🗄️ 库位搜索与编辑</div>
+      <div class="card-body">
+        <div style="display:flex;gap:12px;margin-bottom:12px;align-items:center">
+          <input type="text" id="slotSearch" placeholder="搜索货位号、内部编号、位置..." style="flex:1;padding:8px 12px;font-size:14px;border:1px solid var(--border);border-radius:6px;outline:none" oninput="filterSlotTable()">
+          <select id="slotFilterStatus" style="padding:8px 12px;font-size:14px;border:1px solid var(--border);border-radius:6px;outline:none" onchange="filterSlotTable()"><option value="">全部状态</option><option value="free">空闲</option><option value="occupied">占用</option><option value="disabled">禁用</option></select>
+          <button class="btn btn-primary" onclick="loadSlotPage()">🔄 刷新</button>
+        </div>
+        <div class="table-wrap" style="max-height:400px"><table class="data-table"><thead><tr><th>内部编号</th><th>货位号</th><th>状态</th><th>位置</th><th>启用</th><th>操作</th></tr></thead><tbody id="slotTableBody"></tbody></table></div>
+      </div>
+    </div>
+
+    <div class="card"><div class="card-header">📦 在库工件</div>
+      <div class="card-body"><div class="table-wrap" style="max-height:180px"><table class="data-table"><thead><tr><th>托盘号</th><th>型号</th><th>货位</th><th>入库时间</th></tr></thead><tbody id="slotInventoryBody"></tbody></table></div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 弹窗 -->
+<div class="modal-overlay hidden" id="slotDetailModal">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header"><span>📦 库位详情</span><a href="javascript:closeSlotDetail()" style="text-decoration:none;color:#999;font-size:18px">✕</a></div>
+    <div class="modal-body" id="slotDetailBody"><div style="text-align:center;padding:20px;color:#98a2b3">加载中...</div></div>
+  </div>
+</div>
+<div class="modal-overlay hidden" id="slotEditModal">
+  <div class="modal-box" style="max-width:500px">
+    <div class="modal-header"><span>✏️ 编辑库位</span><a href="javascript:closeSlotEdit()" style="text-decoration:none;color:#999;font-size:18px">✕</a></div>
+    <div class="modal-body">
+      <div style="text-align:center;margin-bottom:16px"><div style="font-size:20px;font-weight:bold;color:#1d2939" id="editSlotCode">-</div><div style="font-size:13px;color:#98a2b3;margin-top:4px" id="editSlotPosition">-</div></div>
+      <div style="border-top:1px solid #e8ecf0;padding-top:16px">
+        <div class="form-grid" style="grid-template-columns:1fr 1fr">
+          <div class="form-group"><label>内部编号</label><input type="number" id="editInternalNumber" min="0" max="99"></div>
+          <div class="form-group" style="justify-content:flex-end"><label style="display:flex;align-items:center;gap:8px;margin-top:18px"><input type="checkbox" id="editIsEnabled" checked style="width:18px;height:18px"> 启用库位</label></div>
+        </div>
+      </div>
+      <div style="border-top:1px solid #e8ecf0;padding-top:14px;margin-top:14px">
+        <div style="font-size:13px;font-weight:bold;color:#d92d20;margin-bottom:8px">⚠️ 危险操作</div>
+        <button class="btn btn-danger" onclick="abnormalReleaseSlot()" style="width:100%">🔓 异常释放 - 强制清空该库位的工件信息</button>
+        <div style="font-size:11px;color:#98a2b3;margin-top:4px">异常释放会强制删除该库位上的工件记录并释放库位，请谨慎操作。</div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeSlotEdit()">取消</button><button class="btn btn-primary" onclick="saveSlotEdit()">💾 保存</button></div>
+  </div>
+</div>
+
+<script>
+initPage('slots', '货位管理');
+let editingSlotData = null;
+loadSlotPage();
+
+async function loadSlotPage() {
+    try {
+        const state = await api('/appstate');
+        editingSlotData = state.slots;
+        document.getElementById('slotTableBody').innerHTML = state.slots.map(s => {
+            const isDisabled = s.isEnabled === false;
+            const statusText = isDisabled ? '禁用' : (s.isOccupied ? '占用' : '空闲');
+            const statusKey = isDisabled ? 'disabled' : (s.isOccupied ? 'occupied' : 'free');
+            return '<tr data-status="' + statusKey + '"><td>' + String(s.internalNumber).padStart(3, '0') + '</td><td>' + s.slotCode + '</td><td><span class="badge ' + (isDisabled ? 'badge-viewer' : (s.isOccupied ? 'badge-inactive' : 'badge-active')) + '">' + statusText + '</span></td><td>' + s.rowNumber + '排/' + s.columnNumber + '列/' + s.levelNumber + '层</td><td>' + (isDisabled ? '❌' : '✅') + '</td><td><button class="btn btn-sm btn-primary" onclick="openSlotEdit(\'' + s.slotCode + '\')">✏️ 编辑</button></td></tr>';
+        }).join('');
+        document.getElementById('slotInventoryBody').innerHTML = (state.inventory.slice(0,20).map(r => '<tr><td>' + r.palletNumber + '</td><td>' + r.modelType + '</td><td>' + r.slotCode + '</td><td>' + formatTime(r.inboundTime) + '</td></tr>').join('')) || '<tr><td colspan="4" class="empty-state">暂无数据</td></tr>';
+    } catch(e) { toast('加载失败', 'error'); }
+}
+function filterSlotTable() {
+    const keyword = (document.getElementById('slotSearch').value || '').toLowerCase().trim();
+    const statusFilter = document.getElementById('slotFilterStatus').value;
+    document.querySelectorAll('#slotTableBody tr').forEach(tr => {
+        const match = (!keyword || tr.textContent.toLowerCase().includes(keyword)) && (!statusFilter || tr.dataset.status === statusFilter);
+        tr.style.display = match ? '' : 'none';
+    });
+}
+function openSlotEdit(slotCode) {
+    const slot = editingSlotData?.find(s => s.slotCode === slotCode);
+    if (!slot) { toast('未找到库位数据', 'error'); return; }
+    document.getElementById('editSlotCode').textContent = slot.slotCode;
+    document.getElementById('editSlotPosition').textContent = slot.zone + ' · ' + slot.rowNumber + '排' + slot.columnNumber + '列' + slot.levelNumber + '层';
+    document.getElementById('editInternalNumber').value = slot.internalNumber || 0;
+    document.getElementById('editIsEnabled').checked = slot.isEnabled !== false;
+    document.getElementById('slotEditModal').classList.remove('hidden');
+}
+function closeSlotEdit() { document.getElementById('slotEditModal').classList.add('hidden'); }
+async function saveSlotEdit() {
+    const slotCode = document.getElementById('editSlotCode').textContent;
+    const internalNumber = parseInt(document.getElementById('editInternalNumber').value) || 0;
+    const isEnabled = document.getElementById('editIsEnabled').checked;
+    try { await api('/storageslots', { method: 'PUT', body: JSON.stringify({ slotCode, internalNumber, isEnabled }) }); toast('✅ 库位已更新', 'success'); closeSlotEdit(); loadSlotPage(); } catch(e) { toast('❌ ' + e.message, 'error'); }
+}
+async function abnormalReleaseSlot() {
+    const slotCode = document.getElementById('editSlotCode').textContent;
+    if (!confirm('确定要异常释放库位 ' + slotCode + ' 吗？')) return;
+    try { await api('/storageslots/' + encodeURIComponent(slotCode) + '/abnormal-release', { method: 'POST' }); toast('✅ 异常释放成功', 'success'); closeSlotEdit(); loadSlotPage(); } catch(e) { toast('❌ ' + e.message, 'error'); }
+}
+function closeSlotDetail() { document.getElementById('slotDetailModal').classList.add('hidden'); }
+</script>
+</body>
+</html>

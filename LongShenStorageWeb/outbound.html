@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>氢晨库存管理系统 - 出库管理</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="js/shared.js"></script>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon" style="background:transparent;width:auto;height:auto;font-size:22px">🏭</div>
+    <div class="logo-text">氢晨科技<small>库存管理系统</small></div>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-item" href="index.html"><span class="nav-icon">📊</span>仪表盘</a>
+    <a class="nav-item perm-write" href="inbound.html"><span class="nav-icon">📥</span>入库管理</a>
+    <a class="nav-item perm-write active" href="outbound.html"><span class="nav-icon">📤</span>出库管理</a>
+    <a class="nav-item" href="slots.html"><span class="nav-icon">🗄️</span>货位管理</a>
+    <a class="nav-item" href="ledger.html"><span class="nav-icon">📋</span>台账查询</a>
+    <a class="nav-item" href="report.html"><span class="nav-icon">📈</span>报表统计</a>
+    <a class="nav-item perm-write" href="alert.html"><span class="nav-icon">⚠️</span>库存预警</a>
+    <a class="nav-item" href="devmonitor.html"><span class="nav-icon">📡</span>设备监控</a>
+    <a class="nav-item perm-write" href="devcontrol.html"><span class="nav-icon">🎮</span>设备调用</a>
+    <a class="nav-item perm-admin" href="users.html"><span class="nav-icon">👥</span>用户管理</a>
+    <a class="nav-item perm-admin" href="roles.html"><span class="nav-icon">🔐</span>角色权限</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar" id="sidebarAvatar">U</div>
+      <div><div class="user-name" id="sidebarUserName">未登录</div><div class="user-role" id="sidebarUserRole">-</div></div>
+    </div>
+    <button class="logout-btn" onclick="logout()">退出登录</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="pageTitle">出库管理</div>
+    <div class="topbar-right">
+      <span class="topbar-clock" id="topbarClock"></span>
+      <span class="topbar-divider">|</span>
+      <span class="topbar-status" id="headerStatus">-</span>
+      <img src="logo.jpg" alt="氢晨" class="topbar-logo">
+    </div>
+  </div>
+  <div class="content">
+
+    <div class="card"><div class="card-header">📤 在库清单 - 选择要出库的工件</div>
+      <div class="card-body">
+        <div style="display:flex;gap:12px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="outSearch" placeholder="🔍 搜索托盘号、型号、货位号..." style="flex:1;min-width:200px;padding:8px 12px;font-size:14px;border:1px solid var(--border);border-radius:6px;outline:none" oninput="filterOutboundTable()">
+          <select id="outFilterModel" style="padding:8px 12px;font-size:14px;border:1px solid var(--border);border-radius:6px;outline:none" onchange="filterOutboundTable()"><option value="">全部型号</option></select>
+          <select id="outFilterProject" style="padding:8px 12px;font-size:14px;border:1px solid var(--border);border-radius:6px;outline:none" onchange="filterOutboundTable()"><option value="">全部项目</option></select>
+          <button class="btn btn-primary" onclick="loadOutboundInventory()">🔄 刷新</button>
+        </div>
+        <div class="table-wrap" style="max-height:380px">
+          <table class="data-table" id="outboundInventoryTable">
+            <thead><tr><th style="width:40px">选择</th><th>托盘号</th><th>工装号</th><th>项目号</th><th>型号</th><th>工单号</th><th>货位</th><th>入库时间</th><th>操作人</th></tr></thead>
+            <tbody id="outboundInventoryBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="outboundSelectedCard" style="display:none">
+      <div class="card-header">📤 出库确认 — <span id="outSelectedLabel"></span></div>
+      <div class="card-body">
+        <div class="form-grid" style="grid-template-columns:1fr"><div class="form-group"><label>操作人员</label><input id="outOperator" readonly style="background:#f5f5f5;cursor:not-allowed"></div></div>
+        <div class="btn-group">
+          <button class="btn btn-danger" onclick="handleOutbound()">📤 执行出库</button>
+          <button class="btn" onclick="document.getElementById('outboundSelectedCard').style.display='none'">取消</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card"><div class="card-header">📋 出库台账</div>
+      <div class="card-body"><div class="table-wrap"><table class="data-table"><thead><tr><th>时间</th><th>托盘号</th><th>操作人</th><th>说明</th></tr></thead><tbody id="outboundBody"></tbody></table></div></div>
+    </div>
+
+    <div class="card"><div class="card-header">🔧 PLC复位</div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">当立库处于故障状态(4009=3)时，可发送复位指令清除故障。</p>
+        <button class="btn btn-warning" onclick="resetPlc(this)">🔧 执行PLC复位</button>
+        <div class="reset-result" style="margin-top:8px;font-size:13px;display:none"></div>
+      </div>
+    </div>
+
+    <div class="card"><div class="card-header">⚠️ 出库故障任务</div>
+      <div class="card-body">
+        <div class="table-wrap" style="max-height:200px">
+          <table class="data-table"><thead><tr><th>时间</th><th>记录ID</th><th>货位</th><th>原因</th><th>状态</th><th>操作</th></tr></thead>
+            <tbody id="outboundFaultBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+initPage('outbound', '出库管理');
+let selectedOutboundId = null;
+
+loadOutboundInventory();
+loadOutboundRecent();
+loadFaultTasks();
+
+async function loadOutboundInventory() {
+    try {
+        const items = await api('/workpiecerecords');
+        const models = [...new Set(items.map(r => r.modelType).filter(Boolean))];
+        const projects = [...new Set(items.map(r => r.projectNumber).filter(Boolean))];
+        document.getElementById('outFilterModel').innerHTML = '<option value="">全部型号</option>' + models.map(m => '<option value="' + m + '">' + m + '</option>').join('');
+        document.getElementById('outFilterProject').innerHTML = '<option value="">全部项目</option>' + projects.map(p => '<option value="' + p + '">' + p + '</option>').join('');
+        window._outboundInventory = items;
+        renderOutboundTable(items);
+    } catch(e) { toast('加载在库清单失败: ' + e.message, 'error'); }
+}
+function renderOutboundTable(items) {
+    const tbody = document.getElementById('outboundInventoryBody');
+    if (!items || items.length === 0) { tbody.innerHTML = '<tr><td colspan="9" class="empty-state">暂无在库工件</td></tr>'; return; }
+    tbody.innerHTML = items.map(r => '<tr onclick="selectOutboundRow(\'' + r.id + '\')" id="outRow_' + r.id + '" style="cursor:pointer">' +
+        '<td><input type="radio" name="outSelect" value="' + r.id + '" onclick="event.stopPropagation();selectOutboundRow(\'' + r.id + '\')"></td>' +
+        '<td><strong>' + (r.palletNumber || '-') + '</strong></td><td>' + (r.toolingNumber || '-') + '</td><td>' + (r.projectNumber || '-') + '</td>' +
+        '<td>' + (r.modelType || '-') + '</td><td>' + (r.workOrder || '-') + '</td><td>' + (r.slotCode || '-') + '</td>' +
+        '<td>' + formatTime(r.inboundTime) + '</td><td>' + (r.lastOperator || '-') + '</td></tr>'
+    ).join('');
+}
+function filterOutboundTable() {
+    const keyword = document.getElementById('outSearch').value.toLowerCase().trim();
+    const filterModel = document.getElementById('outFilterModel').value;
+    const filterProject = document.getElementById('outFilterProject').value;
+    const items = window._outboundInventory || [];
+    const filtered = items.filter(r => {
+        if (keyword && !r.palletNumber.toLowerCase().includes(keyword) && !r.modelType.toLowerCase().includes(keyword) && !r.slotCode.toLowerCase().includes(keyword) && !r.projectNumber.toLowerCase().includes(keyword) && !r.toolingNumber.toLowerCase().includes(keyword) && !r.workOrder.toLowerCase().includes(keyword)) return false;
+        if (filterModel && r.modelType !== filterModel) return false;
+        if (filterProject && r.projectNumber !== filterProject) return false;
+        return true;
+    });
+    renderOutboundTable(filtered);
+}
+function selectOutboundRow(id) {
+    selectedOutboundId = id;
+    document.querySelectorAll('#outboundInventoryBody tr').forEach(r => r.style.background = '');
+    const row = document.getElementById('outRow_' + id);
+    if (row) { row.style.background = '#e8f0fe'; row.querySelector('input').checked = true; }
+    const items = window._outboundInventory || [];
+    const item = items.find(r => r.id === id);
+    if (item) {
+        document.getElementById('outSelectedLabel').textContent = item.palletNumber + ' | ' + (item.modelType || '-') + ' | ' + item.slotCode;
+        document.getElementById('outOperator').value = currentUser?.displayName || '';
+        document.getElementById('outboundSelectedCard').style.display = 'block';
+    }
+}
+async function handleOutbound() {
+    const recordId = selectedOutboundId;
+    const operator = document.getElementById('outOperator').value.trim();
+    if (!recordId || !operator) { toast('请选择工件并输入操作人员', 'error'); return; }
+    const items = window._outboundInventory || [];
+    const item = items.find(r => r.id === recordId);
+    if (!item || !item.slotCode) { toast('未找到工件货位信息', 'error'); return; }
+    const slotMatch = item.slotCode.match(/(\d+)排-(\d+)列-(\d+)层/);
+    if (!slotMatch) { toast('货位编码解析失败', 'error'); return; }
+    const row = parseInt(slotMatch[1]), col = parseInt(slotMatch[2]), level = parseInt(slotMatch[3]);
+    showPlcTaskModal('📤 出库任务执行中');
+    addPlcStep(1, '查询PLC状态', '', 'active');
+    try {
+        const monitor = await api('/device/monitor');
+        const status = monitor.status?.state || 0;
+        if (status !== 1) {
+            updatePlcStep(1, '立库状态异常，无法出库', 'error');
+            toast('❌ 立库状态异常', 'error');
+            document.getElementById('plcTaskCloseBtn').classList.remove('hidden'); return;
+        }
+        updatePlcStep(1, '立库空闲中 ✅', 'done');
+        addPlcStep(2, '发送出库指令', '位置: ' + row + '排/' + col + '列/' + level + '层', 'active');
+        const resp = await api('/device/outbound-task', { method: 'POST', body: JSON.stringify({ recordId, operatorName: operator, row, col, level }) });
+        if (resp.logs) resp.logs.forEach(l => addPlcLog(l));
+        if (resp.steps) resp.steps.forEach((s, i) => {
+            const status = (s.name.includes('中断') || s.name.includes('失败')) ? 'error' : 'done';
+            const n = i + 2;
+            document.getElementById('plcStep_' + n) ? updatePlcStep(n, s.detail || s.name, status) : addPlcStep(n, s.name, s.detail || '', status);
+        });
+        if (resp.success) {
+            document.getElementById('plcTaskProgress').style.width = '100%';
+            toast('✅ 出库成功', 'success');
+            document.getElementById('outboundSelectedCard').style.display = 'none';
+            selectedOutboundId = null;
+            loadOutboundInventory(); loadOutboundRecent();
+        } else {
+            document.getElementById('plcTaskProgress').style.width = '100%';
+            document.getElementById('plcTaskProgress').style.background = 'var(--danger)';
+            toast('❌ ' + (resp.error || '出库失败'), 'error');
+            if (resp.faultSaved) loadFaultTasks();
+        }
+    } catch(e) {
+        addPlcLog('[' + new Date().toLocaleTimeString() + '] ❌ 异常: ' + e.message);
+        toast('❌ 出库异常: ' + e.message, 'error');
+    }
+    document.getElementById('plcTaskCloseBtn').classList.remove('hidden');
+}
+async function loadOutboundRecent() {
+    try {
+        const entries = await api('/ledgerentries');
+        document.getElementById('outboundBody').innerHTML = (entries.filter(e => e.type === 1).slice(0,15).map(e =>
+            '<tr><td>' + formatTime(e.timestamp) + '</td><td>' + e.palletNumber + '</td><td>' + e.operatorName + '</td><td>' + e.actionDescription + '</td></tr>'
+        ).join('')) || '<tr><td colspan="4" class="empty-state">暂无数据</td></tr>';
+    } catch(e) {}
+}
+async function loadFaultTasks() {
+    try {
+        const tasks = await api('/faulttasks');
+        const outboundTasks = tasks.filter(t => t.taskType === 'Outbound');
+        const body = document.getElementById('outboundFaultBody');
+        if (body) {
+            body.innerHTML = outboundTasks.length === 0
+                ? '<tr><td colspan="6" class="empty-state">暂无故障任务</td></tr>'
+                : outboundTasks.map(t => {
+                    const isPending = t.status === 'Pending';
+                    return '<tr><td>' + formatTime(t.faultTime) + '</td><td>' + (t.recordId || '-') + '</td><td>' + (t.slotCode || '-') + '</td><td>' + (t.faultReason || '-') + '</td><td>' + (isPending ? '<span style="color:#d92d20;font-weight:bold">⚠️ 待处理</span>' : '<span style="color:#079455;font-weight:bold">✅ ' + t.resolveAction + '</span>') + '</td><td>' + (isPending ? '<button class="btn btn-sm btn-warning" onclick="retryFault(\'' + t.id + '\')">🔄 重试</button>' : '-') + '</td></tr>';
+                }).join('');
+        }
+    } catch(e) {}
+}
+async function retryFault(id) { try { await api('/faulttasks/' + id + '/retry', { method: 'POST' }); toast('已重新提交'); loadFaultTasks(); } catch(e) { toast('重试失败', 'error'); } }
+async function resetPlc(btn) {
+    if (!confirm('⚠️ 确定要执行PLC复位吗？')) return;
+    btn.disabled = true; btn.textContent = '⏳ 复位中...';
+    const el = btn.parentElement.querySelector('.reset-result');
+    if (el) { el.style.display = 'block'; el.innerHTML = '<span style="color:#667085">⏳ 查询PLC状态...</span>'; }
+    try {
+        const resp = await api('/device/reset', { method: 'POST' });
+        if (el) el.innerHTML = resp.success ? '<span style="color:var(--success);font-weight:bold">✅ ' + resp.message + '</span>' : '<span style="color:var(--warning);font-weight:bold">⚠️ ' + resp.message + '</span>';
+        toast(resp.success ? '✅ 复位成功' : '⚠️ ' + resp.message);
+    } catch(e) { if (el) el.innerHTML = '<span style="color:var(--danger)">❌ 复位失败: ' + e.message + '</span>'; toast('❌ 复位失败', 'error'); }
+    btn.disabled = false; btn.textContent = '🔧 执行PLC复位';
+}
+</script>
+<!-- 引用 inbound.html 中的弹窗 -->
+<script>
+function showPlcTaskModal(t) { document.getElementById('plcTaskTitle').textContent = t; document.getElementById('plcTaskProgress').style.width = '0%'; document.getElementById('plcTaskSteps').innerHTML = ''; document.getElementById('plcTaskLogs').innerHTML = ''; document.getElementById('plcTaskCloseBtn').classList.add('hidden'); document.getElementById('plcTaskModal').classList.remove('hidden'); }
+function addPlcStep(n, name, detail, status) { const icons={done:'✅',active:'⏳',error:'❌',wait:'⏸️'},cls={done:'plc-step-done',active:'plc-step-active',error:'plc-step-error',wait:'plc-step-wait'}; const c=document.getElementById('plcTaskSteps'),d=document.createElement('div'); d.className='plc-step '+(cls[status]||'plc-step-wait'); d.id='plcStep_'+n; d.innerHTML='<span class="plc-step-icon">'+(icons[status]||'⏸️')+'</span><span>'+name+(detail?' — '+detail:'')+'</span>'; c.appendChild(d); c.scrollTop=c.scrollHeight; }
+function updatePlcStep(n, detail, status) { const icons={done:'✅',active:'⏳',error:'❌',wait:'⏸️'},cls={done:'plc-step-done',active:'plc-step-active',error:'plc-step-error',wait:'plc-step-wait'}; const el=document.getElementById('plcStep_'+n); if(el){ el.className='plc-step '+(cls[status]||'plc-step-wait'); el.innerHTML='<span class="plc-step-icon">'+(icons[status]||'⏸️')+'</span><span>'+el.textContent.replace(/^[✅⏳❌⏸️]\s*/,'')+(detail?' — '+detail:'')+'</span>'; } }
+function addPlcLog(msg) { const c=document.getElementById('plcTaskLogs'); c.innerHTML+='<div>'+msg+'</div>'; c.scrollTop=c.scrollHeight; }
+function closePlcTaskModal() { document.getElementById('plcTaskModal').classList.add('hidden'); }
+</script>
+</body>
+</html>

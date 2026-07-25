@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>氢晨库存管理系统 - 设备调用</title>
+<link rel="stylesheet" href="css/style.css"><script src="js/shared.js"></script>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo"><div class="logo-icon" style="background:transparent;width:auto;height:auto;font-size:22px">🏭</div><div class="logo-text">氢晨科技<small>库存管理系统</small></div></div>
+  <nav class="sidebar-nav">
+    <a class="nav-item" href="index.html"><span class="nav-icon">📊</span>仪表盘</a>
+    <a class="nav-item perm-write" href="inbound.html"><span class="nav-icon">📥</span>入库管理</a>
+    <a class="nav-item perm-write" href="outbound.html"><span class="nav-icon">📤</span>出库管理</a>
+    <a class="nav-item" href="slots.html"><span class="nav-icon">🗄️</span>货位管理</a>
+    <a class="nav-item" href="ledger.html"><span class="nav-icon">📋</span>台账查询</a>
+    <a class="nav-item" href="report.html"><span class="nav-icon">📈</span>报表统计</a>
+    <a class="nav-item perm-write" href="alert.html"><span class="nav-icon">⚠️</span>库存预警</a>
+    <a class="nav-item" href="devmonitor.html"><span class="nav-icon">📡</span>设备监控</a>
+    <a class="nav-item perm-write active" href="devcontrol.html"><span class="nav-icon">🎮</span>设备调用</a>
+    <a class="nav-item perm-admin" href="users.html"><span class="nav-icon">👥</span>用户管理</a>
+    <a class="nav-item perm-admin" href="roles.html"><span class="nav-icon">🔐</span>角色权限</a>
+  </nav>
+  <div class="sidebar-footer"><div class="user-info"><div class="user-avatar" id="sidebarAvatar">U</div><div><div class="user-name" id="sidebarUserName">-</div><div class="user-role" id="sidebarUserRole">-</div></div></div><button class="logout-btn" onclick="logout()">退出登录</button></div>
+</div>
+<div class="main">
+  <div class="topbar"><div class="topbar-title" id="pageTitle">设备调用</div><div class="topbar-right"><span class="topbar-clock" id="topbarClock"></span><span class="topbar-divider">|</span><span class="topbar-status" id="headerStatus">-</span><img src="logo.jpg" alt="氢晨" class="topbar-logo"></div></div>
+  <div class="content">
+
+    <div class="card"><div class="card-header">🎮 设备指令 <span style="font-weight:normal;font-size:12px;color:var(--text-secondary)">写入D区寄存器</span></div>
+      <div class="card-body">
+        <div style="padding:12px;background:#fef3e8;border-radius:6px;font-size:13px;color:#b06823;margin-bottom:16px">⚠️ 设置目标货位参数后点击"发送指令"。</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div style="padding:16px;background:#f0f4f8;border-radius:8px">
+            <div style="font-size:13px;font-weight:bold;margin-bottom:8px">🎯 目标货位</div>
+            <div class="form-group" style="margin-bottom:6px"><label style="font-size:12px">设备序号</label><input type="number" id="cmdDeviceNo" value="1" min="1"></div>
+            <div class="form-group" style="margin-bottom:6px"><label style="font-size:12px">动作标志</label><input type="number" id="cmdActionFlag" value="1" min="0" max="65535"></div>
+            <div class="form-group" style="margin-bottom:6px"><label style="font-size:12px">排</label><input type="number" id="cmdFromRow" value="1" min="1" max="2"></div>
+            <div class="form-group" style="margin-bottom:6px"><label style="font-size:12px">列</label><input type="number" id="cmdFromCol" value="1" min="1" max="4"></div>
+            <div class="form-group"><label style="font-size:12px">层</label><input type="number" id="cmdFromLevel" value="1" min="1" max="8"></div>
+          </div>
+          <div style="padding:16px;background:#f0f4f8;border-radius:8px">
+            <div style="font-size:13px;font-weight:bold;margin-bottom:8px">⚙️ 信息</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:8px"><p>不分出入库，只需设置目标位置。</p><p style="margin-top:8px">指令将写入：</p><p>D2022 = 设备序号</p><p>D2023 = 动作标志</p><p>D2024~2026 = 排/列/层</p></div>
+          </div>
+        </div>
+        <div class="btn-group"><button class="btn btn-primary" onclick="sendDeviceCommand()">🚀 发送指令</button><button class="btn" onclick="loadDeviceRegisters()">🔄 刷新写入区</button></div>
+        <div id="cmdResult" style="margin-top:12px;padding:12px;background:#f8f9fc;border-radius:6px;font-size:13px;display:none"></div>
+      </div>
+    </div>
+
+    <div class="card"><div class="card-header">🔧 PLC复位</div>
+      <div class="card-body">
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">当立库处于故障状态(4009=3)时，可发送复位指令清除故障。</p>
+        <button class="btn btn-warning" onclick="resetPlc(this)">🔧 执行PLC复位</button>
+        <div class="reset-result" style="margin-top:8px;font-size:13px;display:none"></div>
+      </div>
+    </div>
+
+    <div class="card"><div class="card-header">📝 写入寄存器</div>
+      <div class="card-body"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px" id="writeRegisters"></div></div>
+    </div>
+
+  </div>
+</div>
+<script>
+initPage('devcontrol', '设备调用');
+loadDeviceRegisters();
+
+async function loadDeviceRegisters() {
+    try {
+        const defs = await api('/device/write-defs');
+        const regs = defs.registers || [];
+        const current = await api('/device/monitor');
+        const cmd = current.command || {};
+        document.getElementById('writeRegisters').innerHTML = regs.map(r => {
+            const val = cmd[({2022:'deviceNo',2023:'actionFlag',2024:'row',2025:'col',2026:'level'})[r.address]] ?? 0;
+            return '<div style="padding:8px;background:#f9fafb;border-radius:6px;border:1px solid var(--border)"><div style="font-size:11px;color:var(--text-secondary)">D' + r.address + ' ' + r.name + '</div><input type="number" id="reg_' + r.address + '" value="' + val + '" min="0" max="65535" style="width:100%;padding:4px 8px;margin-top:4px;border:1px solid var(--border);border-radius:4px;font-size:13px"><div style="font-size:10px;color:var(--text-secondary);margin-top:2px">' + r.description + '</div></div>';
+        }).join('');
+    } catch(e) { toast('加载寄存器定义失败', 'error'); }
+}
+async function sendDeviceCommand() {
+    const cmd = {
+        deviceNo: parseInt(document.getElementById('cmdDeviceNo').value) || 1,
+        actionFlag: parseInt(document.getElementById('cmdActionFlag').value) || 1,
+        fromRow: parseInt(document.getElementById('cmdFromRow').value) || 1,
+        fromCol: parseInt(document.getElementById('cmdFromCol').value) || 1,
+        fromLevel: parseInt(document.getElementById('cmdFromLevel').value) || 1
+    };
+    try {
+        const result = await api('/device/command', { method: 'POST', body: JSON.stringify(cmd) });
+        const el = document.getElementById('cmdResult');
+        el.style.display = 'block';
+        el.innerHTML = '<div style="color:var(--success);font-weight:bold">✅ ' + result.message + '</div>';
+    } catch(e) {
+        const el = document.getElementById('cmdResult');
+        el.style.display = 'block';
+        el.innerHTML = '<div style="color:var(--danger)">❌ 指令发送失败: ' + e.message + '</div>';
+    }
+}
+async function resetPlc(btn) {
+    if (!confirm('⚠️ 确定要执行PLC复位吗？')) return;
+    btn.disabled = true; btn.textContent = '⏳ 复位中...';
+    const el = btn.parentElement.querySelector('.reset-result');
+    if (el) { el.style.display = 'block'; el.innerHTML = '<span style="color:#667085">⏳ 查询PLC状态...</span>'; }
+    try { const resp = await api('/device/reset', { method: 'POST' }); if (el) el.innerHTML = resp.success ? '<span style="color:var(--success);font-weight:bold">✅ ' + resp.message + '</span>' : '<span style="color:var(--warning);font-weight:bold">⚠️ ' + resp.message + '</span>'; toast(resp.success ? '✅ 复位成功' : '⚠️ ' + resp.message); } catch(e) { if (el) el.innerHTML = '<span style="color:var(--danger)">❌ 复位失败: ' + e.message + '</span>'; toast('❌ 复位失败', 'error'); }
+    btn.disabled = false; btn.textContent = '🔧 执行PLC复位';
+}
+</script>
+</body>
+</html>

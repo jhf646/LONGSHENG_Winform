@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>氢晨库存管理系统 - 设备监控</title>
+<link rel="stylesheet" href="css/style.css"><script src="js/shared.js"></script>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo"><div class="logo-icon" style="background:transparent;width:auto;height:auto;font-size:22px">🏭</div><div class="logo-text">氢晨科技<small>库存管理系统</small></div></div>
+  <nav class="sidebar-nav">
+    <a class="nav-item" href="index.html"><span class="nav-icon">📊</span>仪表盘</a>
+    <a class="nav-item perm-write" href="inbound.html"><span class="nav-icon">📥</span>入库管理</a>
+    <a class="nav-item perm-write" href="outbound.html"><span class="nav-icon">📤</span>出库管理</a>
+    <a class="nav-item" href="slots.html"><span class="nav-icon">🗄️</span>货位管理</a>
+    <a class="nav-item" href="ledger.html"><span class="nav-icon">📋</span>台账查询</a>
+    <a class="nav-item" href="report.html"><span class="nav-icon">📈</span>报表统计</a>
+    <a class="nav-item perm-write" href="alert.html"><span class="nav-icon">⚠️</span>库存预警</a>
+    <a class="nav-item active" href="devmonitor.html"><span class="nav-icon">📡</span>设备监控</a>
+    <a class="nav-item perm-write" href="devcontrol.html"><span class="nav-icon">🎮</span>设备调用</a>
+    <a class="nav-item perm-admin" href="users.html"><span class="nav-icon">👥</span>用户管理</a>
+    <a class="nav-item perm-admin" href="roles.html"><span class="nav-icon">🔐</span>角色权限</a>
+  </nav>
+  <div class="sidebar-footer"><div class="user-info"><div class="user-avatar" id="sidebarAvatar">U</div><div><div class="user-name" id="sidebarUserName">-</div><div class="user-role" id="sidebarUserRole">-</div></div></div><button class="logout-btn" onclick="logout()">退出登录</button></div>
+</div>
+<div class="main">
+  <div class="topbar"><div class="topbar-title" id="pageTitle">设备监控</div><div class="topbar-right"><span class="topbar-clock" id="topbarClock"></span><span class="topbar-divider">|</span><span class="topbar-status" id="headerStatus">-</span><img src="logo.jpg" alt="氢晨" class="topbar-logo"></div></div>
+  <div class="content">
+
+    <div class="card"><div class="card-header">📡 设备运行状态 <span style="font-weight:normal;font-size:12px;color:var(--text-secondary)">汇川Easy522 | D区寄存器</span></div>
+      <div class="card-body">
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+          <div style="flex:1;min-width:200px;padding:16px;background:#f8f9fc;border-radius:8px;text-align:center"><div style="font-size:12px;color:var(--text-secondary)">设备状态</div><div id="devState" style="font-size:24px;font-weight:bold;margin-top:4px">-</div></div>
+          <div style="flex:1;min-width:200px;padding:16px;background:#f8f9fc;border-radius:8px;text-align:center"><div style="font-size:12px;color:var(--text-secondary)">运行模式</div><div id="devMode" style="font-size:24px;font-weight:bold;margin-top:4px">-</div></div>
+          <div style="flex:1;min-width:200px;padding:16px;background:#f8f9fc;border-radius:8px;text-align:center"><div style="font-size:12px;color:var(--text-secondary)">动作步骤</div><div id="devStep" style="font-size:24px;font-weight:bold;margin-top:4px">-</div></div>
+          <div style="flex:1;min-width:200px;padding:16px;background:#f8f9fc;border-radius:8px;text-align:center"><div style="font-size:12px;color:var(--text-secondary)">故障代码</div><div id="devError" style="font-size:24px;font-weight:bold;margin-top:4px;color:var(--success)">0</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div style="padding:16px;background:#f8f9fc;border-radius:8px"><div style="font-size:13px;font-weight:bold;margin-bottom:10px">📍 轴位置</div><div id="devPosition" style="font-size:13px"></div></div>
+          <div style="padding:16px;background:#f8f9fc;border-radius:8px"><div style="font-size:13px;font-weight:bold;margin-bottom:10px">🚦 信号状态</div><div id="devFlags" style="font-size:13px"></div></div>
+        </div>
+        <div style="font-size:12px;color:var(--text-secondary);text-align:center;padding:8px"><span id="devLastUpdate">等待数据...</span><button class="btn btn-sm" style="margin-left:8px" onclick="loadDeviceMonitor()">🔄 刷新</button></div>
+      </div>
+    </div>
+
+    <div class="card"><div class="card-header">📋 寄存器值一览</div>
+      <div class="card-body"><div class="table-wrap" style="max-height:400px"><table class="data-table"><thead><tr><th>地址</th><th>名称</th><th>值</th><th>说明</th></tr></thead><tbody id="devRegisterTable"></tbody></table></div></div>
+    </div>
+
+  </div>
+</div>
+<script>
+initPage('devmonitor', '设备监控');
+let devMonTimer = null;
+loadDeviceMonitor();
+
+async function loadDeviceMonitor() {
+    try {
+        const resp = await fetch(API_BASE + '/device/monitor', {
+            headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {}
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        const st = data.status, pos = data.position, fl = data.flags, cmd = data.command;
+        const stateMap = { 1: '<span style="color:#12b76a">🟢 空闲中</span>', 2: '<span style="color:#f79009">🟡 运行中</span>', 3: '<span style="color:#d92d20">🔴 故障中</span>', 4: '<span style="color:#667085">⏸️ 暂停中</span>' };
+
+        // 只更新 textContent 和 style
+        const devStateEl = document.getElementById('devState');
+        if (devStateEl) {
+            const stateIcons = { 1: '🟢', 2: '🟡', 3: '🔴', 4: '⏸️' };
+            const stateColors = { 1: '#12b76a', 2: '#f79009', 3: '#d92d20', 4: '#667085' };
+            const stateNames = { 1: '空闲中', 2: '运行中', 3: '故障中', 4: '暂停中' };
+            devStateEl.textContent = (stateIcons[st.state] || '❓') + ' ' + (stateNames[st.state] || '未知');
+            devStateEl.style.color = stateColors[st.state] || '#667085';
+        }
+        const devModeEl = document.getElementById('devMode');
+        if (devModeEl) devModeEl.textContent = st.mode === 1 ? '🛠️ 手动' : st.mode === 2 ? '🤖 自动' : '-';
+        const devStepEl = document.getElementById('devStep');
+        if (devStepEl) devStepEl.textContent = st.step > 0 ? '步骤 ' + st.step : '-';
+        const devErrorEl = document.getElementById('devError');
+        if (devErrorEl) { devErrorEl.textContent = st.errorCode || '0'; devErrorEl.style.color = st.errorCode > 0 ? '#d92d20' : '#12b76a'; }
+        const devPosEl = document.getElementById('devPosition');
+        if (devPosEl) {
+            devPosEl.innerHTML = '<div style="margin-bottom:4px">X轴: <strong>' + pos.x + '</strong> mm</div><div style="margin-bottom:4px">Y轴: <strong>' + pos.y + '</strong> mm</div><div style="margin-bottom:4px">Z深库: <strong>' + pos.zDeep + '</strong> mm</div><div>Z浅库: <strong>' + pos.zShallow + '</strong> mm</div>';
+        }
+        const devFlagsEl = document.getElementById('devFlags');
+        if (devFlagsEl) {
+            devFlagsEl.innerHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px"><div>任务完成: <strong>' + (fl.taskDone ? '✅' : '❌') + '</strong></div><div>转移状态: <strong>' + fl.transferState + '</strong></div><div>可移库: <strong>' + (data.canMove === 1 ? '✅' : '❌') + '</strong></div><div>左入可入库: <strong>' + (fl.leftIn === 1 ? '✅' : '❌') + '</strong></div><div>左出可出库: <strong>' + (fl.leftOut === 1 ? '✅' : '❌') + '</strong></div><div>右入可入库: <strong>' + (fl.rightIn === 1 ? '✅' : '❌') + '</strong></div><div>右出可出库: <strong>' + (fl.rightOut === 1 ? '✅' : '❌') + '</strong></div><div>A→B完成: <strong>' + (fl.actionDone ? '✅' : '❌') + '</strong></div><div>堆垛车位置: <strong>' + (fl.carrierPos || '-') + '</strong></div></div>';
+        }
+        const devLastEl = document.getElementById('devLastUpdate');
+        if (devLastEl) devLastEl.textContent = '🕐 更新于 ' + new Date().toLocaleTimeString('zh-CN');
+        const devRegEl = document.getElementById('devRegisterTable');
+        if (devRegEl) {
+            const allRegs = [
+                {a:4008,n:'设备序号',v:data.deviceNo ?? 0,d:''},{a:4009,n:'立库状态',v:st.state,d:'1空闲 2运行 3故障'},{a:4010,n:'故障代码(高)',v:st.errorCode,d:''},{a:4011,n:'故障代码(低)',v:st.errorCodeLow ?? 0,d:''},{a:4012,n:'运行模式',v:st.mode,d:'1手动 2自动'},{a:4013,n:'动作步骤',v:st.step,d:''},{a:4014,n:'任务完成',v:fl.taskDone,d:'1完成 2执行'},{a:4015,n:'转移状态',v:fl.transferState,d:'1未取 2已转 3到位'},{a:4016,n:'备用',v:fl.spare ?? 0,d:''},{a:4017,n:'X轴位置',v:pos.x,d:'mm'},{a:4018,n:'Y轴位置',v:pos.y,d:'mm'},{a:4019,n:'Z深库',v:pos.zDeep,d:'mm'},{a:4020,n:'Z浅库',v:pos.zShallow,d:'mm'},{a:4021,n:'可移库',v:data.canMove ?? 0,d:'1可 2不可'},{a:4022,n:'左入可入库',v:fl.leftIn,d:'1可 2不可'},{a:4023,n:'左出可出库',v:fl.leftOut,d:'1可 2不可'},{a:4024,n:'右入可入库',v:fl.rightIn,d:'1可 2不可'},{a:4025,n:'右出可出库',v:fl.rightOut,d:'1可 2不可'},{a:4026,n:'A→B完成',v:fl.actionDone,d:'0/1'},{a:4027,n:'堆垛车位置',v:fl.carrierPos,d:'车位号'},{a:2022,n:'设备序号',v:data.deviceNo ?? 0,d:'写入区'},{a:2023,n:'动作序列/标志',v:cmd.seqNo,d:'写入区'},{a:2024,n:'排',v:cmd.row ?? 0,d:'写入区'},{a:2025,n:'列',v:cmd.col ?? 0,d:'写入区'},{a:2026,n:'层',v:cmd.level ?? 0,d:'写入区'}
+            ];
+            devRegEl.innerHTML = allRegs.map(r => '<tr><td>D' + r.a + '</td><td>' + r.n + '</td><td>' + r.v + '</td><td>' + r.d + '</td></tr>').join('');
+        }
+    } catch(e) { /* 静默 */ }
+}
+</script>
+</body>
+</html>

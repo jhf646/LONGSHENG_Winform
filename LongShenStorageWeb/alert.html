@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>氢晨库存管理系统 - 库存预警</title>
+<link rel="stylesheet" href="css/style.css"><script src="js/shared.js"></script>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-logo"><div class="logo-icon" style="background:transparent;width:auto;height:auto;font-size:22px">🏭</div><div class="logo-text">氢晨科技<small>库存管理系统</small></div></div>
+  <nav class="sidebar-nav">
+    <a class="nav-item" href="index.html"><span class="nav-icon">📊</span>仪表盘</a>
+    <a class="nav-item perm-write" href="inbound.html"><span class="nav-icon">📥</span>入库管理</a>
+    <a class="nav-item perm-write" href="outbound.html"><span class="nav-icon">📤</span>出库管理</a>
+    <a class="nav-item" href="slots.html"><span class="nav-icon">🗄️</span>货位管理</a>
+    <a class="nav-item" href="ledger.html"><span class="nav-icon">📋</span>台账查询</a>
+    <a class="nav-item" href="report.html"><span class="nav-icon">📈</span>报表统计</a>
+    <a class="nav-item perm-write active" href="alert.html"><span class="nav-icon">⚠️</span>库存预警</a>
+    <a class="nav-item" href="devmonitor.html"><span class="nav-icon">📡</span>设备监控</a>
+    <a class="nav-item perm-write" href="devcontrol.html"><span class="nav-icon">🎮</span>设备调用</a>
+    <a class="nav-item perm-admin" href="users.html"><span class="nav-icon">👥</span>用户管理</a>
+    <a class="nav-item perm-admin" href="roles.html"><span class="nav-icon">🔐</span>角色权限</a>
+  </nav>
+  <div class="sidebar-footer"><div class="user-info"><div class="user-avatar" id="sidebarAvatar">U</div><div><div class="user-name" id="sidebarUserName">-</div><div class="user-role" id="sidebarUserRole">-</div></div></div><button class="logout-btn" onclick="logout()">退出登录</button></div>
+</div>
+<div class="main">
+  <div class="topbar"><div class="topbar-title" id="pageTitle">库存预警</div><div class="topbar-right"><span class="topbar-clock" id="topbarClock"></span><span class="topbar-divider">|</span><span class="topbar-status" id="headerStatus">-</span><img src="logo.jpg" alt="氢晨" class="topbar-logo"></div></div>
+  <div class="content">
+    <div class="card"><div class="card-header">⚠️ 库存预警设置</div>
+      <div class="card-body">
+        <div style="display:flex;gap:24px;align-items:center;margin-bottom:20px;padding:20px;background:#f8f9fc;border-radius:8px">
+          <div style="font-size:48px" id="alertStatusIcon">⚠️</div>
+          <div><div id="alertStatus" style="font-size:18px;font-weight:bold;margin-bottom:4px"><span class="badge badge-active">✅ 正常</span></div><div id="alertDetail" style="color:var(--text-secondary);font-size:14px">加载中...</div></div>
+        </div>
+        <div class="form-grid" style="max-width:500px">
+          <div class="form-group"><label>库存下限</label><input type="number" id="alertMin" min="0" max="999" value="2"></div>
+          <div class="form-group"><label>库存上限</label><input type="number" id="alertMax" min="0" max="999" value="18"></div>
+        </div>
+        <div class="btn-group"><button class="btn btn-primary" onclick="saveAlertSettings()">💾 保存预警阈值</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+initPage('alert', '库存预警');
+loadAlertPage();
+
+async function loadAlertPage() {
+    try {
+        const state = await api('/appstate');
+        const alert = state.alertSettings || {};
+        document.getElementById('alertMin').value = alert.minThreshold ?? 2;
+        document.getElementById('alertMax').value = alert.maxThreshold ?? 18;
+        const count = state.inventory?.length || 0;
+        const minVal = alert.minThreshold ?? 2;
+        const maxVal = alert.maxThreshold ?? 18;
+        const status = count < minVal ? '⚠️ 低于下限' : count > maxVal ? '⚠️ 高于上限' : '✅ 正常';
+        document.getElementById('alertStatus').innerHTML = '<span class="badge ' + (count < minVal || count > maxVal ? 'badge-inactive' : 'badge-active') + '" style="font-size:16px;padding:4px 16px">' + status + '</span>';
+        document.getElementById('alertDetail').innerHTML = '当前库存：<strong>' + count + '</strong> 件 · 下限：<strong>' + minVal + '</strong> · 上限：<strong>' + maxVal + '</strong>';
+    } catch(e) { toast('加载预警数据失败', 'error'); }
+}
+async function saveAlertSettings() {
+    const min = parseInt(document.getElementById('alertMin').value)||2, max = parseInt(document.getElementById('alertMax').value)||18;
+    if (min > max) { toast('下限不能大于上限', 'error'); return; }
+    try { await api('/appstate/alerts', { method:'POST', body:JSON.stringify({minThreshold:min, maxThreshold:max}) }); toast('✅ 已保存', 'success'); loadAlertPage(); } catch(e) { toast('保存失败', 'error'); }
+}
+</script>
+</body>
+</html>
