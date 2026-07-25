@@ -17,13 +17,15 @@ public class DeviceController : ControllerBase
     private readonly RegisterConfigService _config;
     private readonly FileLogger _logger;
     private readonly SqlServerRepository _repo;
+    private readonly FaultCodeService _faultCode;
 
-    public DeviceController(IModbusDevice device, RegisterConfigService config, FileLogger logger, SqlServerRepository repo)
+    public DeviceController(IModbusDevice device, RegisterConfigService config, FileLogger logger, SqlServerRepository repo, FaultCodeService faultCode)
     {
         _device = device;
         _config = config;
         _logger = logger;
         _repo = repo;
+        _faultCode = faultCode;
     }
 
     /// <summary>获取读取寄存器定义（来自registers.json）</summary>
@@ -130,6 +132,7 @@ public class DeviceController : ControllerBase
                 ["canMove"] = V(13),
                 ["connected"] = _device.IsConnected,
                 ["configName"] = _config.GetConfig().DeviceName,
+                ["faults"] = _faultCode.Parse(V(2), V(3)),
                 ["command"] = new
                 {
                     deviceNo = 0, actionFlag = 0,

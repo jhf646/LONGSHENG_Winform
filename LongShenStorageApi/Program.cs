@@ -52,6 +52,8 @@ else
 builder.Services.AddHostedService<ModbusSimulatorHostedService>();
 // 注册寄存器配置服务
 builder.Services.AddSingleton<RegisterConfigService>();
+// 注册故障代码解析服务
+builder.Services.AddSingleton<FaultCodeService>();
 
 // 文件日志 (输出到运行目录/Logs/)
 builder.Services.AddSingleton(sp => new FileLogger(Path.Combine(AppContext.BaseDirectory, "Logs")));

@@ -142,3 +142,4 @@ D:\工作\上海longshen\LONGSHENG_Winform\LongShenStorageApi\obj\Debug\net10.0\
 D:\工作\上海longshen\LONGSHENG_Winform\LongShenStorageApi\obj\Debug\net10.0\LongShenStorageApi.pdb
 D:\工作\上海longshen\LONGSHENG_Winform\LongShenStorageApi\obj\Debug\net10.0\LongShenStorageApi.genruntimeconfig.cache
 D:\工作\上海longshen\LONGSHENG_Winform\LongShenStorageApi\obj\Debug\net10.0\ref\LongShenStorageApi.dll
+D:\工作\上海longshen\LONGSHENG_Winform\LongShenStorageApi\bin\Debug\net10.0\faultcodes.json

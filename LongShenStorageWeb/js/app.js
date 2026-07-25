@@ -208,18 +208,47 @@ async function loadDeviceStatus() {
                 <div style="display:flex;align-items:center;gap:8px;padding:10px;background:#f8f9fc;border-radius:6px">
                     <span style="font-size:18px">📋</span>
                     <div><div style="font-size:11px;color:#98a2b3">任务状态</div>
-                    <div style="font-weight:bold;color:#667085">${!connected ? '❓ 未知' : resp.flags?.taskDone === 1 ? '✅ 已完成' : '⏳ 等待中'}</div></div>
+                    <div style="font-weight:bold;color:#667085">${typeof resp.flags?.taskDone === 'undefined' ? '❓ 未知' : resp.flags?.taskDone === 1 ? '✅ 已完成' : '⏳ 等待中'}</div></div>
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;padding:10px;background:#f8f9fc;border-radius:6px">
                     <span style="font-size:18px">⚠️</span>
                     <div><div style="font-size:11px;color:#98a2b3">故障代码</div>
-                    <div style="font-weight:bold;color:#667085">${!connected ? '❓ 未知' : (resp.status?.errorCode || 0) !== 0 || (resp.status?.errorCodeLow || 0) !== 0 ? '🔴 ' + (resp.status?.errorCode ?? 0) + ':' + (resp.status?.errorCodeLow ?? 0) : '🟢 无故障'}</div></div>
+                    <div style="font-weight:bold;color:#667085">${renderFaultCodes(resp.faults, resp.status?.errorCode, resp.status?.errorCodeLow)}</div></div>
                 </div>
             </div>`;
     } catch (e) {
         const el = document.getElementById('deviceStatusBody');
         if (el) el.innerHTML = '<div style="color:#98a2b3;text-align:center;padding:12px">⚠️ 设备状态加载失败</div>';
     }
+}
+
+function renderFaultCodes(faults, errorCodeHigh, errorCodeLow) {
+    // 显示原始值
+    const rawHex = '4010=' + (errorCodeHigh ?? 0).toString(16).toUpperCase().padStart(4,'0')
+        + ' 4011=' + (errorCodeLow ?? 0).toString(16).toUpperCase().padStart(4,'0');
+    // 显示二进制
+    const regHigh = (errorCodeHigh ?? 0);
+    const regLow = (errorCodeLow ?? 0);
+    const binHigh = regHigh.toString(2).padStart(16, '0').replace(/(.{4})/g, '$1 ');
+    const binLow = regLow.toString(2).padStart(16, '0').replace(/(.{4})/g, '$1 ');
+    
+    if (!faults || faults.length === 0) {
+        const isZero = (regHigh === 0 && regLow === 0);
+        return `<span style="color:#079455">🟢 无故障</span>
+            <div style="font-size:11px;color:#98a2b3;margin-top:2px">${rawHex} | ${binHigh} ${binLow}</div>`;
+    }
+
+    const faultItems = faults.map(f =>
+        `<div style="display:flex;align-items:center;gap:6px;padding:3px 0">
+            <span style="color:#d92d20;font-size:12px">🔴</span>
+            <span style="font-size:12px;color:#1d2939">故障${f.code}: ${f.name}</span>
+            <span style="font-size:10px;color:#98a2b3">(D${f.register} bit${f.bit})</span>
+        </div>`
+    ).join('');
+
+    return `<div style="color:#d92d20;font-weight:bold;margin-bottom:4px">🔴 ${faults.length} 个故障</div>
+        <div style="font-size:11px;color:#98a2b3;margin-bottom:4px">${rawHex} | ${binHigh} ${binLow}</div>
+        ${faultItems}`;
 }
 
 // ===== 货位可视化 =====
