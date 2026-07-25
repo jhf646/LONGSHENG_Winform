@@ -91,6 +91,9 @@ public sealed class SqlServerRepository
             -- 角色权限表
             IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='RolePermissions' AND xtype='U')
             CREATE TABLE RolePermissions (RoleName NVARCHAR(50) NOT NULL, PageId NVARCHAR(50) NOT NULL, PRIMARY KEY (RoleName, PageId));
+            -- 故障任务表
+            IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='FaultTasks' AND xtype='U')
+            CREATE TABLE FaultTasks (Id UNIQUEIDENTIFIER PRIMARY KEY, TaskType NVARCHAR(20) NOT NULL, PalletNumber NVARCHAR(50) NOT NULL DEFAULT '', ToolingNumber NVARCHAR(200) NOT NULL DEFAULT '', ProjectNumber NVARCHAR(200) NOT NULL DEFAULT '', ModelType NVARCHAR(200) NOT NULL DEFAULT '', WorkOrder NVARCHAR(200) NOT NULL DEFAULT '', CellNumber NVARCHAR(200) NOT NULL DEFAULT '', ComponentSections INT NOT NULL DEFAULT 1, CustomerName NVARCHAR(200) NOT NULL DEFAULT '', OperatorName NVARCHAR(100) NOT NULL DEFAULT '', Notes NVARCHAR(500) NOT NULL DEFAULT '', Row INT NOT NULL DEFAULT 0, Col INT NOT NULL DEFAULT 0, Level INT NOT NULL DEFAULT 0, SlotCode NVARCHAR(50) NOT NULL DEFAULT '', RecordId UNIQUEIDENTIFIER NULL, FaultReason NVARCHAR(500) NOT NULL DEFAULT '', FaultTime DATETIME2 NOT NULL DEFAULT GETDATE(), Status NVARCHAR(20) NOT NULL DEFAULT 'Pending', ResolveAction NVARCHAR(50) NOT NULL DEFAULT '', ResolveTime DATETIME2 NULL, ResolvedBy NVARCHAR(100) NOT NULL DEFAULT '');
             -- 清理残留的工件记录：仅清理已释放库位的孤儿记录（修复MERGE不删除导致的历史残留）
             DELETE r FROM WorkpieceRecords r
             LEFT JOIN StorageSlots s ON r.SlotCode = s.SlotCode AND s.IsOccupied = 1
@@ -719,5 +722,135 @@ public sealed class SqlServerRepository
             ins.ExecuteNonQuery();
         }
         tx.Commit();
+    }
+
+    // ===== 故障任务管理 =====
+
+    public void SaveFaultTask(FaultTaskRecord task)
+    {
+        using var conn = new SqlConnection(_connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand(@"INSERT INTO FaultTasks (Id, TaskType, PalletNumber, ToolingNumber, ProjectNumber, ModelType, WorkOrder, CellNumber, ComponentSections, CustomerName, OperatorName, Notes, Row, Col, Level, SlotCode, RecordId, FaultReason, FaultTime, Status, ResolveAction, ResolveTime, ResolvedBy)
+            VALUES (@Id, @TaskType, @Pallet, @Tool, @Proj, @Model, @Wo, @Cell, @Comp, @Cust, @Op, @Notes, @Row, @Col, @Lev, @Slot, @RecId, @Reason, @Time, @Status, @Action, @RTime, @RBy)", conn);
+        cmd.Parameters.AddWithValue("@Id", task.Id);
+        cmd.Parameters.AddWithValue("@TaskType", task.TaskType);
+        cmd.Parameters.AddWithValue("@Pallet", task.PalletNumber);
+        cmd.Parameters.AddWithValue("@Tool", task.ToolingNumber);
+        cmd.Parameters.AddWithValue("@Proj", task.ProjectNumber);
+        cmd.Parameters.AddWithValue("@Model", task.ModelType);
+        cmd.Parameters.AddWithValue("@Wo", task.WorkOrder);
+        cmd.Parameters.AddWithValue("@Cell", task.CellNumber);
+        cmd.Parameters.AddWithValue("@Comp", task.ComponentSections);
+        cmd.Parameters.AddWithValue("@Cust", task.CustomerName);
+        cmd.Parameters.AddWithValue("@Op", task.OperatorName);
+        cmd.Parameters.AddWithValue("@Notes", task.Notes);
+        cmd.Parameters.AddWithValue("@Row", task.Row);
+        cmd.Parameters.AddWithValue("@Col", task.Col);
+        cmd.Parameters.AddWithValue("@Lev", task.Level);
+        cmd.Parameters.AddWithValue("@Slot", task.SlotCode);
+        cmd.Parameters.AddWithValue("@RecId", task.RecordId ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@Reason", task.FaultReason);
+        cmd.Parameters.AddWithValue("@Time", task.FaultTime);
+        cmd.Parameters.AddWithValue("@Status", task.Status);
+        cmd.Parameters.AddWithValue("@Action", task.ResolveAction);
+        cmd.Parameters.AddWithValue("@RTime", task.ResolveTime ?? (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@RBy", task.ResolvedBy ?? "");
+        cmd.ExecuteNonQuery();
+    }
+
+    public List<FaultTaskRecord> GetFaultTasks()
+    {
+        var list = new List<FaultTaskRecord>();
+        using var conn = new SqlConnection(_connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand("SELECT Id, TaskType, PalletNumber, ToolingNumber, ProjectNumber, ModelType, WorkOrder, CellNumber, ComponentSections, CustomerName, OperatorName, Notes, Row, Col, Level, SlotCode, RecordId, FaultReason, FaultTime, Status, ResolveAction, ResolveTime, ResolvedBy FROM FaultTasks ORDER BY FaultTime DESC", conn);
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            list.Add(new FaultTaskRecord
+            {
+                Id = reader.GetGuid(0),
+                TaskType = reader.GetString(1),
+                PalletNumber = reader.GetString(2),
+                ToolingNumber = reader.GetString(3),
+                ProjectNumber = reader.GetString(4),
+                ModelType = reader.GetString(5),
+                WorkOrder = reader.GetString(6),
+                CellNumber = reader.GetString(7),
+                ComponentSections = reader.GetInt32(8),
+                CustomerName = reader.GetString(9),
+                OperatorName = reader.GetString(10),
+                Notes = reader.GetString(11),
+                Row = reader.GetInt32(12),
+                Col = reader.GetInt32(13),
+                Level = reader.GetInt32(14),
+                SlotCode = reader.GetString(15),
+                RecordId = reader.IsDBNull(16) ? null : reader.GetGuid(16),
+                FaultReason = reader.GetString(17),
+                FaultTime = reader.GetDateTime(18),
+                Status = reader.GetString(19),
+                ResolveAction = reader.GetString(20),
+                ResolveTime = reader.IsDBNull(21) ? null : reader.GetDateTime(21),
+                ResolvedBy = reader.GetString(22)
+            });
+        }
+        return list;
+    }
+
+    /// <summary>处理故障任务：更新状态，并根据操作执行入库/出库</summary>
+    public string ResolveFaultTask(ResolveFaultRequest request)
+    {
+        var tasks = GetFaultTasks();
+        var task = tasks.FirstOrDefault(t => t.Id == request.FaultId);
+        if (task is null) return "故障任务不存在";
+
+        if (task.TaskType == "Inbound")
+        {
+            if (request.Action == "已处理入库")
+            {
+                // 当作入库成功处理：写入库存
+                var result = Inbound(new InboundRequest
+                {
+                    PalletNumber = task.PalletNumber,
+                    ToolingNumber = task.ToolingNumber,
+                    ProjectNumber = task.ProjectNumber,
+                    ModelType = task.ModelType,
+                    WorkOrder = task.WorkOrder,
+                    CellNumber = task.CellNumber,
+                    ComponentSections = task.ComponentSections,
+                    CustomerName = task.CustomerName,
+                    OperatorName = request.OperatorName,
+                    SpecifiedSlot = $"{task.Row}排-{task.Col}列-{task.Level}层",
+                    Notes = task.Notes
+                });
+                if (result is null) return "已无空闲货位，无法处理入库";
+            }
+            // else "未处理入库"：不清除任何数据，仅标记已处理
+        }
+        else if (task.TaskType == "Outbound")
+        {
+            if (request.Action == "已处理出库" && task.RecordId.HasValue)
+            {
+                // 当作出库成功处理：清除库存
+                Outbound(new OutboundRequest
+                {
+                    RecordId = task.RecordId.Value,
+                    OperatorName = request.OperatorName
+                });
+            }
+            // else "未处理出库"：保留库存，仅标记已处理
+        }
+
+        // 更新故障任务状态
+        using var conn = new SqlConnection(_connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand("UPDATE FaultTasks SET Status = 'Resolved', ResolveAction = @Action, ResolveTime = @Time, ResolvedBy = @By WHERE Id = @Id", conn);
+        cmd.Parameters.AddWithValue("@Id", task.Id);
+        cmd.Parameters.AddWithValue("@Action", request.Action);
+        cmd.Parameters.AddWithValue("@Time", DateTime.Now);
+        cmd.Parameters.AddWithValue("@By", request.OperatorName);
+        cmd.ExecuteNonQuery();
+
+        return "";
     }
 }

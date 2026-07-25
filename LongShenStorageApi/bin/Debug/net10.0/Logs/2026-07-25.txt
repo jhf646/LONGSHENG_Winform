@@ -29,3 +29,4 @@
 [09:16:29.812] [ERROR] PLC 连接失败 192.168.1.88:502 - The operation was canceled.
 [09:16:29.813] [INFO] PLC 未连接，触发自动连接...
 [09:16:32.822] [ERROR] PLC 连接失败 192.168.1.88:502 - The operation was canceled.
+[09:31:53.392] [INFO] ModbusTcpClientService 初始化: 192.168.1.88:502 站号=1

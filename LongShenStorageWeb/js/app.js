@@ -112,8 +112,8 @@ async function switchPage(pageId) {
         else if (pageId === 'roles') { loadRolePage(); }
         else if (pageId === 'devcontrol') { await loadDeviceRegisters(); }
         else if (pageId === 'devmonitor') { await loadDeviceMonitor(); }
-        else if (pageId === 'outbound') { await loadOutboundInventory(); loadOutboundRecent(); }
-        else if (pageId === 'inbound') { loadInboundRecent(); if (currentUser) document.getElementById('inOperator').value = currentUser.displayName || ''; }
+        else if (pageId === 'outbound') { await loadOutboundInventory(); loadOutboundRecent(); loadFaultTasks(); }
+        else if (pageId === 'inbound') { loadInboundRecent(); loadFaultTasks(); if (currentUser) document.getElementById('inOperator').value = currentUser.displayName || ''; }
     } catch(e) { console.warn('页面加载错误:', e); }
 }
 
@@ -332,6 +332,7 @@ async function handleInbound() {
             document.getElementById('plcTaskProgress').style.width = '100%';
             document.getElementById('plcTaskProgress').style.background = 'var(--danger)';
             toast('❌ ' + (resp.error || '入库失败'), 'error');
+            if (resp.faultSaved) { loadFaultTasks(); }
         }
     } catch (e) {
         addPlcLog(`[${new Date().toLocaleTimeString()}] ❌ 异常: ${e.message}`);
@@ -488,6 +489,7 @@ async function handleOutbound() {
             document.getElementById('plcTaskProgress').style.width = '100%';
             document.getElementById('plcTaskProgress').style.background = 'var(--danger)';
             toast('❌ ' + (resp.error || '出库失败'), 'error');
+            if (resp.faultSaved) { loadFaultTasks(); }
         }
     } catch(e) {
         addPlcLog(`[${new Date().toLocaleTimeString()}] ❌ 异常: ${e.message}`);
@@ -1091,4 +1093,120 @@ async function resetPlc(btn) {
         toast('❌ 复位失败: ' + e.message, 'error');
     }
     btn.disabled = false; btn.textContent = '🔧 执行PLC复位';
+}
+
+// ===== 故障任务管理 =====
+
+async function loadFaultTasks() {
+    try {
+        const tasks = await api('/faulttasks');
+        const inboundTasks = tasks.filter(t => t.taskType === 'Inbound');
+        const outboundTasks = tasks.filter(t => t.taskType === 'Outbound');
+
+        // 入库故障表格
+        const inBody = document.getElementById('inboundFaultBody');
+        if (inBody) {
+            inBody.innerHTML = inboundTasks.length === 0
+                ? '<tr><td colspan="8" class="empty-state">暂无故障任务</td></tr>'
+                : inboundTasks.map(t => renderFaultRow(t, 'inbound')).join('');
+        }
+
+        // 出库故障表格
+        const outBody = document.getElementById('outboundFaultBody');
+        if (outBody) {
+            outBody.innerHTML = outboundTasks.length === 0
+                ? '<tr><td colspan="6" class="empty-state">暂无故障任务</td></tr>'
+                : outboundTasks.map(t => renderFaultRow(t, 'outbound')).join('');
+        }
+    } catch(e) { /* 静默忽略 */ }
+}
+
+function renderFaultRow(task, type) {
+    const time = formatTime(task.faultTime);
+    const isPending = task.status === 'Pending';
+    const statusHtml = isPending
+        ? '<span style="color:#d92d20;font-weight:bold">⚠️ 待处理</span>'
+        : `<span style="color:#079455;font-weight:bold">✅ ${task.resolveAction}</span>`;
+
+    if (type === 'inbound') {
+        return `<tr>
+            <td>${time}</td>
+            <td>${task.palletNumber || '-'}</td>
+            <td>${task.toolingNumber || '-'}</td>
+            <td>${task.modelType || '-'}</td>
+            <td>${task.slotCode || '-'}</td>
+            <td style="color:#d92d20;font-size:12px">${task.faultReason}</td>
+            <td>${statusHtml}</td>
+            <td>${isPending ? `<button class="btn btn-sm btn-warning" onclick="showFaultModal('${task.id}')">🔧 故障处理</button>` : '-'}</td>
+        </tr>`;
+    } else {
+        return `<tr>
+            <td>${time}</td>
+            <td style="font-size:12px">${task.recordId ? task.recordId.substring(0,8) + '...' : '-'}</td>
+            <td>${task.slotCode || '-'}</td>
+            <td style="color:#d92d20;font-size:12px">${task.faultReason}</td>
+            <td>${statusHtml}</td>
+            <td>${isPending ? `<button class="btn btn-sm btn-warning" onclick="showFaultModal('${task.id}')">🔧 故障处理</button>` : '-'}</td>
+        </tr>`;
+    }
+}
+
+async function showFaultModal(faultId) {
+    const tasks = await api('/faulttasks');
+    const task = tasks.find(t => t.id === faultId);
+    if (!task) { toast('故障任务不存在', 'error'); return; }
+
+    const isInbound = task.taskType === 'Inbound';
+    document.getElementById('faultInfo').innerHTML = `
+        <strong>${isInbound ? '📥 入库' : '📤 出库'}故障</strong><br>
+        时间: ${formatTime(task.faultTime)}<br>
+        位置: ${task.slotCode || '-'}<br>
+        原因: ${task.faultReason}<br>
+        ${isInbound ? `托盘: ${task.palletNumber || '-'} | 工装: ${task.toolingNumber || '-'}` : `记录ID: ${task.recordId || '-'}`}
+    `;
+
+    const actionsDiv = document.getElementById('faultActions');
+    if (isInbound) {
+        actionsDiv.innerHTML = `
+            <button class="btn btn-primary" onclick="resolveFault('${faultId}', '已处理入库')" style="width:100%;padding:12px">
+                ✅ 已处理入库 — 保存库存数据
+            </button>
+            <button class="btn btn-outline" onclick="resolveFault('${faultId}', '未处理入库')" style="width:100%;padding:12px">
+                ❌ 未处理入库 — 清除库存数据
+            </button>
+        `;
+    } else {
+        actionsDiv.innerHTML = `
+            <button class="btn btn-danger" onclick="resolveFault('${faultId}', '已处理出库')" style="width:100%;padding:12px">
+                ✅ 已处理出库 — 清除库存数据
+            </button>
+            <button class="btn btn-outline" onclick="resolveFault('${faultId}', '未处理出库')" style="width:100%;padding:12px">
+                🔄 未处理出库 — 保留库存数据
+            </button>
+        `;
+    }
+
+    document.getElementById('faultModal').classList.remove('hidden');
+}
+
+async function resolveFault(faultId, action) {
+    const operator = currentUser?.displayName || '系统';
+    try {
+        await api('/faulttasks/resolve', {
+            method: 'POST',
+            body: JSON.stringify({ faultId, action, operatorName: operator })
+        });
+        toast('✅ 故障已处理: ' + action, 'success');
+        closeFaultModal();
+        await Promise.all([loadFaultTasks(), loadDashboard(), loadDropdowns()]);
+        loadInboundRecent();
+        loadOutboundRecent();
+        loadOutboundInventory();
+    } catch(e) {
+        toast('❌ 处理失败: ' + e.message, 'error');
+    }
+}
+
+function closeFaultModal() {
+    document.getElementById('faultModal').classList.add('hidden');
 }

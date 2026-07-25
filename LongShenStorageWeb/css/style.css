@@ -257,6 +257,8 @@ body {
 .btn-danger { background: var(--danger); color: white; border-color: var(--danger); }
 .btn-warning { background: var(--warning); color: white; border-color: var(--warning); }
 .btn-sm { padding: 5px 12px; font-size: 12px; }
+.btn-outline { background: white; color: var(--primary); border: 1px solid var(--primary); }
+.btn-outline:hover { background: #f0f4ff; }
 .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 
 /* ===== 搜索栏 ===== */

@@ -151,6 +151,15 @@ async function handleLogin() {
           <div class="reset-result" style="margin-top:8px;font-size:13px;display:none"></div>
         </div>
       </div>
+      <div class="card"><div class="card-header">⚠️ 入库故障任务</div>
+        <div class="card-body">
+          <div class="table-wrap" style="max-height:200px">
+            <table class="data-table"><thead><tr><th>时间</th><th>托盘号</th><th>工装号</th><th>型号</th><th>货位</th><th>原因</th><th>状态</th><th>操作</th></tr></thead>
+              <tbody id="inboundFaultBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- 出库 -->
@@ -195,6 +204,15 @@ async function handleLogin() {
           <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">当立库处于故障状态(4009=3)时，可发送复位指令清除故障。</p>
           <button class="btn btn-warning" onclick="resetPlc(this)">🔧 执行PLC复位</button>
           <div class="reset-result" style="margin-top:8px;font-size:13px;display:none"></div>
+        </div>
+      </div>
+      <div class="card"><div class="card-header">⚠️ 出库故障任务</div>
+        <div class="card-body">
+          <div class="table-wrap" style="max-height:200px">
+            <table class="data-table"><thead><tr><th>时间</th><th>记录ID</th><th>货位</th><th>原因</th><th>状态</th><th>操作</th></tr></thead>
+              <tbody id="outboundFaultBody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -500,6 +518,25 @@ async function handleLogin() {
     </div>
     <div class="modal-footer" id="plcTaskFooter">
       <button class="btn btn-primary hidden" id="plcTaskCloseBtn" onclick="closePlcTaskModal()">✅ 关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 故障处理弹窗 -->
+<div class="modal-overlay hidden" id="faultModal">
+  <div class="modal-box" style="max-width:500px">
+    <div class="modal-header">
+      <span>⚠️ 故障任务处理</span>
+      <a href="javascript:closeFaultModal()" style="text-decoration:none;color:#999;font-size:18px">✕</a>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:16px;padding:12px;background:#fff8f0;border-radius:6px;border:1px solid #ffe0b2">
+        <div style="font-size:13px;color:#b76e00;margin-bottom:4px" id="faultInfo"></div>
+      </div>
+      <div id="faultActions" style="display:flex;gap:12px;flex-direction:column"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeFaultModal()">关闭</button>
     </div>
   </div>
 </div>

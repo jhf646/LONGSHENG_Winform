@@ -281,3 +281,41 @@ public sealed class PageInfo
     public string Name { get; set; } = string.Empty;
     public bool Allowed { get; set; }
 }
+
+// ===== 故障任务 =====
+
+/// <summary>出入库任务故障记录</summary>
+public sealed class FaultTaskRecord
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string TaskType { get; set; } = "";          // "Inbound" 或 "Outbound"
+    public string PalletNumber { get; set; } = "";
+    public string ToolingNumber { get; set; } = "";
+    public string ProjectNumber { get; set; } = "";
+    public string ModelType { get; set; } = "";
+    public string WorkOrder { get; set; } = "";
+    public string CellNumber { get; set; } = "";
+    public int ComponentSections { get; set; } = 1;
+    public string CustomerName { get; set; } = "";
+    public string OperatorName { get; set; } = "";
+    public string Notes { get; set; } = "";
+    public int Row { get; set; }
+    public int Col { get; set; }
+    public int Level { get; set; }
+    public string SlotCode { get; set; } = "";
+    public Guid? RecordId { get; set; }                  // 出库时关联的工件记录ID
+    public string FaultReason { get; set; } = "";
+    public DateTime FaultTime { get; set; } = DateTime.Now;
+    public string Status { get; set; } = "Pending";      // "Pending" 待处理, "Resolved" 已处理
+    public string ResolveAction { get; set; } = "";      // 处理方式
+    public DateTime? ResolveTime { get; set; }
+    public string? ResolvedBy { get; set; }
+}
+
+/// <summary>故障处理请求</summary>
+public sealed class ResolveFaultRequest
+{
+    public Guid FaultId { get; set; }
+    public string Action { get; set; } = "";    // "已处理入库"/"未处理入库"/"已处理出库"/"未处理出库"
+    public string OperatorName { get; set; } = "";
+}

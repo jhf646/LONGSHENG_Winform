@@ -200,6 +200,7 @@ public class DeviceController : ControllerBase
         var steps = new List<object>();
         var success = false;
         var logEntries = new List<string>();
+        var sendLevel = 0;
 
         try
         {
@@ -223,7 +224,7 @@ public class DeviceController : ControllerBase
 
             // 步骤2：发送PLC指令（入库动作码=3）
             // 第1排第1列特殊处理：层数-1发送给PLC
-            var sendLevel = request.Level;
+            sendLevel = request.Level;
             var levelNote = "";
             if (request.Row == 1 && request.Col == 1)
             {
@@ -259,7 +260,9 @@ public class DeviceController : ControllerBase
                 var errMsg = status == 3 ? "立库故障中，任务中断" : "立库暂停中，任务中断";
                 _logger.Error($"任务中断: {errMsg}");
                 logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ⛔ {errMsg}");
-                return Ok(new { success = false, error = errMsg, steps, logs = logEntries });
+                steps.Add(new { step = 4, name = "任务中断", detail = errMsg, raw = $"D4009 = {status}" });
+                SaveInboundFault(request, sendLevel, errMsg);
+                return Ok(new { success = false, error = errMsg, faultSaved = true, steps, logs = logEntries });
             }
 
             // 步骤3：等待任务完成（检测4009=1 且 4014=1）
@@ -281,7 +284,8 @@ public class DeviceController : ControllerBase
                     _logger.Error(errMsg);
                     logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ⛔ {errMsg}");
                     steps.Add(new { step = 4, name = "任务中断", detail = errMsg, raw = $"D4009 = {status}" });
-                    return Ok(new { success = false, error = errMsg, steps, logs = logEntries });
+                    SaveInboundFault(request, sendLevel, errMsg);
+                    return Ok(new { success = false, error = errMsg, faultSaved = true, steps, logs = logEntries });
                 }
 
                 if (status == 1)
@@ -312,7 +316,8 @@ public class DeviceController : ControllerBase
                 var errMsg = "等待超时，任务未完成";
                 _logger.Error(errMsg);
                 logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ⛔ {errMsg}");
-                return Ok(new { success = false, error = errMsg, steps, logs = logEntries });
+                SaveInboundFault(request, sendLevel, errMsg);
+                return Ok(new { success = false, error = errMsg, faultSaved = true, steps, logs = logEntries });
             }
 
             // 步骤4：写入数据库
@@ -359,7 +364,8 @@ public class DeviceController : ControllerBase
         {
             _logger.Error($"入库任务异常: {ex.Message}");
             logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ❌ 任务异常: {ex.Message}");
-            return Ok(new { success = false, error = ex.Message, steps, logs = logEntries });
+            SaveInboundFault(request, sendLevel, $"任务异常: {ex.Message}");
+            return Ok(new { success = false, error = ex.Message, faultSaved = true, steps, logs = logEntries });
         }
 
         _logger.Info($"===== 入库任务结束 ({(success ? "成功" : "失败")}) =====");
@@ -374,6 +380,7 @@ public class DeviceController : ControllerBase
         var steps = new List<object>();
         var success = false;
         var logEntries = new List<string>();
+        var sendLevel = 0;
 
         try
         {
@@ -397,7 +404,7 @@ public class DeviceController : ControllerBase
 
             // 步骤2：发送PLC指令（出库动作码=2）
             // 第1排第1列特殊处理：层数-1发送给PLC
-            var sendLevel = request.Level;
+            sendLevel = request.Level;
             var levelNote = "";
             if (request.Row == 1 && request.Col == 1)
             {
@@ -433,7 +440,9 @@ public class DeviceController : ControllerBase
                 var errMsg = status == 3 ? "立库故障中，任务中断" : "立库暂停中，任务中断";
                 _logger.Error($"任务中断: {errMsg}");
                 logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ⛔ {errMsg}");
-                return Ok(new { success = false, error = errMsg, steps, logs = logEntries });
+                steps.Add(new { step = 4, name = "任务中断", detail = errMsg, raw = $"D4009 = {status}" });
+                SaveOutboundFault(request, sendLevel, errMsg);
+                return Ok(new { success = false, error = errMsg, faultSaved = true, steps, logs = logEntries });
             }
 
             // 步骤3：等待任务完成（检测4009=1 且 4014=1）
@@ -454,7 +463,8 @@ public class DeviceController : ControllerBase
                     _logger.Error(errMsg);
                     logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ⛔ {errMsg}");
                     steps.Add(new { step = 4, name = "任务中断", detail = errMsg, raw = $"D4009 = {status}" });
-                    return Ok(new { success = false, error = errMsg, steps, logs = logEntries });
+                    SaveOutboundFault(request, sendLevel, errMsg);
+                    return Ok(new { success = false, error = errMsg, faultSaved = true, steps, logs = logEntries });
                 }
 
                 if (status == 1)
@@ -485,7 +495,8 @@ public class DeviceController : ControllerBase
                 var errMsg = "等待超时，任务未完成";
                 _logger.Error(errMsg);
                 logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ⛔ {errMsg}");
-                return Ok(new { success = false, error = errMsg, steps, logs = logEntries });
+                SaveOutboundFault(request, sendLevel, errMsg);
+                return Ok(new { success = false, error = errMsg, faultSaved = true, steps, logs = logEntries });
             }
 
             // 步骤4：写入数据库（出库）
@@ -511,6 +522,7 @@ public class DeviceController : ControllerBase
                     {
                         logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ❌ 出库数据库操作失败");
                         steps.Add(new { step = 5, name = "数据库写入", detail = "失败", raw = "" });
+                        SaveOutboundFault(request, sendLevel, "出库数据库操作失败");
                         success = false;
                     }
                 }
@@ -519,6 +531,7 @@ public class DeviceController : ControllerBase
                     _logger.Error($"出库数据库异常: {dbEx.Message}");
                     logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ❌ 出库数据库异常: {dbEx.Message}");
                     steps.Add(new { step = 5, name = "数据库写入", detail = dbEx.Message, raw = "" });
+                    SaveOutboundFault(request, sendLevel, $"数据库写入异常: {dbEx.Message}");
                     success = false;
                 }
             }
@@ -527,12 +540,78 @@ public class DeviceController : ControllerBase
         {
             _logger.Error($"出库任务异常: {ex.Message}");
             logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ❌ 任务异常: {ex.Message}");
-            return Ok(new { success = false, error = ex.Message, steps, logs = logEntries });
+            SaveOutboundFault(request, sendLevel, $"任务异常: {ex.Message}");
+            return Ok(new { success = false, error = ex.Message, faultSaved = true, steps, logs = logEntries });
         }
 
         _logger.Info($"===== 出库任务结束 ({(success ? "成功" : "失败")}) =====");
         logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ===== 出库任务 {(success ? "成功" : "失败")} =====");
         return Ok(new { success, steps, logs = logEntries });
+    }
+
+    // ===== 故障记录辅助方法 =====
+
+    private void SaveInboundFault(PlcTaskRequest request, int sendLevel, string faultReason)
+    {
+        try
+        {
+            _repo.SaveFaultTask(new FaultTaskRecord
+            {
+                TaskType = "Inbound",
+                PalletNumber = request.PalletNumber,
+                ToolingNumber = request.ToolingNumber ?? "",
+                ProjectNumber = request.ProjectNumber ?? "",
+                ModelType = request.ModelType ?? "",
+                WorkOrder = request.WorkOrder ?? "",
+                CellNumber = request.CellNumber ?? "",
+                ComponentSections = request.ComponentSections,
+                CustomerName = request.CustomerName ?? "",
+                OperatorName = request.OperatorName,
+                Notes = request.Notes ?? "",
+                Row = request.Row,
+                Col = request.Col,
+                Level = request.Level,
+                SlotCode = $"{request.Row}排-{request.Col}列-{sendLevel}层",
+                FaultReason = faultReason
+            });
+            _logger.Info($"入库故障记录已保存: {faultReason}");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"保存入库故障记录失败: {ex.Message}");
+        }
+    }
+
+    private void SaveOutboundFault(PlcTaskRequest request, int sendLevel, string faultReason)
+    {
+        try
+        {
+            _repo.SaveFaultTask(new FaultTaskRecord
+            {
+                TaskType = "Outbound",
+                PalletNumber = "",
+                ToolingNumber = "",
+                ProjectNumber = "",
+                ModelType = "",
+                WorkOrder = "",
+                CellNumber = "",
+                ComponentSections = 1,
+                CustomerName = "",
+                OperatorName = request.OperatorName,
+                Notes = "",
+                Row = request.Row,
+                Col = request.Col,
+                Level = request.Level,
+                SlotCode = $"{request.Row}排-{request.Col}列-{sendLevel}层",
+                RecordId = request.RecordId,
+                FaultReason = faultReason
+            });
+            _logger.Info($"出库故障记录已保存: {faultReason}");
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"保存出库故障记录失败: {ex.Message}");
+        }
     }
 }
 
