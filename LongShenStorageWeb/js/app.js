@@ -1,4 +1,4 @@
-// ===== 氢晨库存管理系统 Web v3 =====
+﻿// ===== 氢晨库存管理系统 Web v3 =====
 // API地址（已在 index.html 中定义，直接使用）
 let authToken = localStorage.getItem('ls_token') || '';
 let currentUser = null;
@@ -1214,21 +1214,29 @@ async function showFaultModal(faultId) {
     const actionsDiv = document.getElementById('faultActions');
     if (isInbound) {
         actionsDiv.innerHTML = `
-            <button class="btn btn-primary" onclick="resolveFault('${faultId}', '已处理入库')" style="width:100%;padding:12px">
+            <button class="btn btn-primary" onclick="if(confirm('确定已处理入库并保存库存数据？'))resolveFault('${faultId}', '已处理入库')" style="width:100%;padding:12px">
                 ✅ 已处理入库 — 保存库存数据
             </button>
-            <button class="btn btn-outline" onclick="resolveFault('${faultId}', '未处理入库')" style="width:100%;padding:12px">
+            <div style="margin-top:8px;border-top:1px solid #e8ecf0;padding-top:6px">
+            <span onclick="var x=this.nextElementSibling;x.style.display=x.style.display=='none'?'block':'none';this.textContent=this.textContent=='▶'?'▼':'▶'" style="cursor:pointer;font-size:12px;color:#98a2b3;user-select:none">▶ 危险操作</span>
+            <div style="display:none;margin-top:6px">
+            <button class="btn btn-outline" onclick="if(confirm('确定未处理入库并清除库存数据？'))resolveFault('${faultId}', '未处理入库')" style="width:100%;padding:12px">
                 ❌ 未处理入库 — 清除库存数据
             </button>
+            </div></div>
         `;
     } else {
         actionsDiv.innerHTML = `
-            <button class="btn btn-danger" onclick="resolveFault('${faultId}', '已处理出库')" style="width:100%;padding:12px">
+            <button class="btn btn-danger" onclick="if(confirm('确定已处理出库并清除库存数据？'))resolveFault('${faultId}', '已处理出库')" style="width:100%;padding:12px">
                 ✅ 已处理出库 — 清除库存数据
             </button>
-            <button class="btn btn-outline" onclick="resolveFault('${faultId}', '未处理出库')" style="width:100%;padding:12px">
+            <div style="margin-top:8px;border-top:1px solid #e8ecf0;padding-top:6px">
+            <span onclick="var x=this.nextElementSibling;x.style.display=x.style.display=='none'?'block':'none';this.textContent=this.textContent=='▶'?'▼':'▶'" style="cursor:pointer;font-size:12px;color:#98a2b3;user-select:none">▶ 危险操作</span>
+            <div style="display:none;margin-top:6px">
+            <button class="btn btn-outline" onclick="if(confirm('确定未处理出库并保留库存数据？'))resolveFault('${faultId}', '未处理出库')" style="width:100%;padding:12px">
                 🔄 未处理出库 — 保留库存数据
             </button>
+            </div></div>
         `;
     }
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -298,8 +298,12 @@ async function showFaultModal(faultId) {
     if (!task) { toast('故障任务不存在', 'error'); return; }
     document.getElementById('faultInfo').innerHTML = '<strong>📥 入库故障</strong><br>时间: ' + formatTime(task.faultTime) + '<br>位置: ' + (task.slotCode || '-') + '<br>原因: ' + task.faultReason + '<br>托盘: ' + (task.palletNumber || '-') + ' | 工装: ' + (task.toolingNumber || '-');
     document.getElementById('faultActions').innerHTML =
-        '<button class="btn btn-primary" onclick="resolveFault(\'' + faultId + '\', \'已处理入库\')" style="width:100%;padding:12px">✅ 已处理入库 — 保存库存数据</button>' +
-        '<button class="btn btn-outline" onclick="resolveFault(\'' + faultId + '\', \'未处理入库\')" style="width:100%;padding:12px">❌ 未处理入库 — 清除库存数据</button>';
+        '<button class="btn btn-primary" onclick="if(confirm(\'确定已处理入库并保存库存数据？\'))resolveFault(\'' + faultId + '\', \'已处理入库\')" style="width:100%;padding:12px">✅ 已处理入库 — 保存库存数据</button>' +
+        '<div style="margin-top:8px;border-top:1px solid #e8ecf0;padding-top:6px">' +
+        '<span onclick="var x=this.nextElementSibling;x.style.display=x.style.display==\'none\'?\'block\':\'none\';this.textContent=this.textContent==\'▶\'?\'▼\':\'▶\'" style="cursor:pointer;font-size:12px;color:#98a2b3;user-select:none">▶ 危险操作</span>' +
+        '<div style="display:none;margin-top:6px">' +
+        '<button class="btn btn-outline" onclick="if(confirm(\'确定未处理入库并清除库存数据？\'))resolveFault(\'' + faultId + '\', \'未处理入库\')" style="width:100%;padding:12px">❌ 未处理入库 — 清除库存数据</button>' +
+        '</div></div>';
     document.getElementById('faultModal').classList.remove('hidden');
 }
 
