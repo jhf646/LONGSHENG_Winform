@@ -65,26 +65,16 @@
       </div>
     </div>
 
-    <div class="card" id="outboundSelectedCard" style="display:none">
-      <div class="card-header">📤 出库确认 — <span id="outSelectedLabel"></span></div>
+    <div class="card" id="outboundSelectedCard">
+      <div class="card-header">📤 出库确认 — <span id="outSelectedLabel">未选择工件</span></div>
       <div class="card-body">
         <div class="form-grid" style="grid-template-columns:1fr"><div class="form-group"><label>操作人员</label><input id="outOperator" readonly style="background:#f5f5f5;cursor:not-allowed"></div></div>
         <div class="btn-group">
           <button class="btn btn-danger" onclick="handleOutbound()">📤 执行出库</button>
-          <button class="btn" onclick="document.getElementById('outboundSelectedCard').style.display='none'">取消</button>
+          <button class="btn" onclick="cancelOutbound()">取消</button>
+          <button class="btn btn-warning" onclick="resetPlc(this)">🔧 执行PLC复位</button>
+          <div class="reset-result" style="margin-top:8px;font-size:13px;display:none;width:100%"></div>
         </div>
-      </div>
-    </div>
-
-    <div class="card"><div class="card-header">📋 出库台账</div>
-      <div class="card-body"><div class="table-wrap"><table class="data-table"><thead><tr><th>时间</th><th>托盘号</th><th>操作人</th><th>说明</th></tr></thead><tbody id="outboundBody"></tbody></table></div></div>
-    </div>
-
-    <div class="card"><div class="card-header">🔧 PLC复位</div>
-      <div class="card-body">
-        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">当立库处于故障状态(4009=3)时，可发送复位指令清除故障。</p>
-        <button class="btn btn-warning" onclick="resetPlc(this)">🔧 执行PLC复位</button>
-        <div class="reset-result" style="margin-top:8px;font-size:13px;display:none"></div>
       </div>
     </div>
 
@@ -96,6 +86,10 @@
           </table>
         </div>
       </div>
+    </div>
+
+    <div class="card"><div class="card-header">📋 出库台账</div>
+      <div class="card-body"><div class="table-wrap"><table class="data-table"><thead><tr><th>时间</th><th>托盘号</th><th>操作人</th><th>说明</th></tr></thead><tbody id="outboundBody"></tbody></table></div></div>
     </div>
 
   </div>
@@ -155,6 +149,12 @@ function selectOutboundRow(id) {
         document.getElementById('outOperator').value = currentUser?.displayName || '';
         document.getElementById('outboundSelectedCard').style.display = 'block';
     }
+}
+function cancelOutbound() {
+    selectedOutboundId = null;
+    document.getElementById('outSelectedLabel').textContent = '未选择工件';
+    document.getElementById('outOperator').value = currentUser?.displayName || '';
+    document.getElementById('outboundSelectedCard').style.display = 'none';
 }
 async function handleOutbound() {
     const recordId = selectedOutboundId;
@@ -221,12 +221,41 @@ async function loadFaultTasks() {
                 ? '<tr><td colspan="6" class="empty-state">暂无故障任务</td></tr>'
                 : outboundTasks.map(t => {
                     const isPending = t.status === 'Pending';
-                    return '<tr><td>' + formatTime(t.faultTime) + '</td><td>' + (t.recordId || '-') + '</td><td>' + (t.slotCode || '-') + '</td><td>' + (t.faultReason || '-') + '</td><td>' + (isPending ? '<span style="color:#d92d20;font-weight:bold">⚠️ 待处理</span>' : '<span style="color:#079455;font-weight:bold">✅ ' + t.resolveAction + '</span>') + '</td><td>' + (isPending ? '<button class="btn btn-sm btn-warning" onclick="retryFault(\'' + t.id + '\')">🔄 重试</button>' : '-') + '</td></tr>';
+                    var statusHtml = isPending ? '<span style="color:#d92d20;font-weight:bold">⚠️ 待处理</span>' : '<span style="color:#079455;font-weight:bold">✅ ' + t.resolveAction + '</span>';
+                    var actionHtml = isPending ? '<button class="btn btn-sm btn-warning" onclick="showOutFaultModal(\'' + t.id + '\')">🔧 故障处理</button>' : '-';
+                    return '<tr><td>' + formatTime(t.faultTime) + '</td><td style="font-size:12px">' + (t.recordId ? t.recordId.substring(0,8) + '...' : '-') + '</td><td>' + (t.slotCode || '-') + '</td><td style="color:#d92d20;font-size:12px">' + (t.faultReason || '-') + '</td><td>' + statusHtml + '</td><td>' + actionHtml + '</td></tr>';
                 }).join('');
         }
     } catch(e) {}
 }
-async function retryFault(id) { try { await api('/faulttasks/' + id + '/retry', { method: 'POST' }); toast('已重新提交'); loadFaultTasks(); } catch(e) { toast('重试失败', 'error'); } }
+
+async function showOutFaultModal(faultId) {
+    const tasks = await api('/faulttasks');
+    const task = tasks.find(t => t.id === faultId);
+    if (!task) { toast('故障任务不存在', 'error'); return; }
+    document.getElementById('faultInfo').innerHTML = '<strong>📤 出库故障</strong><br>时间: ' + formatTime(task.faultTime) + '<br>位置: ' + (task.slotCode || '-') + '<br>原因: ' + task.faultReason + '<br>记录ID: ' + (task.recordId || '-');
+    document.getElementById('faultActions').innerHTML =
+        '<button class="btn btn-danger" onclick="resolveOutFault(\'' + faultId + '\', \'已处理出库\')" style="width:100%;padding:12px">✅ 已处理出库 — 清除库存数据</button>' +
+        '<button class="btn btn-outline" onclick="resolveOutFault(\'' + faultId + '\', \'未处理出库\')" style="width:100%;padding:12px">🔄 未处理出库 — 保留库存数据</button>';
+    document.getElementById('faultModal').classList.remove('hidden');
+}
+
+async function resolveOutFault(faultId, action) {
+    var operator = currentUser ? currentUser.displayName : '系统';
+    try {
+        await api('/faulttasks/resolve', {
+            method: 'POST',
+            body: JSON.stringify({ faultId: faultId, action: action, operatorName: operator })
+        });
+        toast('✅ 故障已处理: ' + action, 'success');
+        closeFaultModal();
+        await loadFaultTasks();
+        loadOutboundInventory();
+        loadOutboundRecent();
+    } catch(e) {
+        toast('❌ 处理失败: ' + e.message, 'error');
+    }
+}
 async function resetPlc(btn) {
     if (!confirm('⚠️ 确定要执行PLC复位吗？')) return;
     btn.disabled = true; btn.textContent = '⏳ 复位中...';
@@ -247,6 +276,28 @@ function addPlcStep(n, name, detail, status) { const icons={done:'✅',active:'�
 function updatePlcStep(n, detail, status) { const icons={done:'✅',active:'⏳',error:'❌',wait:'⏸️'},cls={done:'plc-step-done',active:'plc-step-active',error:'plc-step-error',wait:'plc-step-wait'}; const el=document.getElementById('plcStep_'+n); if(el){ el.className='plc-step '+(cls[status]||'plc-step-wait'); el.innerHTML='<span class="plc-step-icon">'+(icons[status]||'⏸️')+'</span><span>'+el.textContent.replace(/^[✅⏳❌⏸️]\s*/,'')+(detail?' — '+detail:'')+'</span>'; } }
 function addPlcLog(msg) { const c=document.getElementById('plcTaskLogs'); c.innerHTML+='<div>'+msg+'</div>'; c.scrollTop=c.scrollHeight; }
 function closePlcTaskModal() { document.getElementById('plcTaskModal').classList.add('hidden'); }
+function closeFaultModal() { document.getElementById('faultModal').classList.add('hidden'); }
 </script>
+
+<!-- 故障处理弹窗 -->
+<div class="modal-overlay hidden" id="faultModal">
+  <div class="modal-box" style="max-width:500px">
+    <div class="modal-header">
+      <span>⚠️ 故障任务处理</span>
+      <a href="javascript:closeFaultModal()" style="text-decoration:none;color:#999;font-size:18px">✕</a>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom:16px;padding:12px;background:#fff8f0;border-radius:6px;border:1px solid #ffe0b2">
+        <div style="font-size:13px;color:#b76e00;margin-bottom:4px" id="faultInfo"></div>
+      </div>
+      <div id="faultActions" style="display:flex;gap:12px;flex-direction:column"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeFaultModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- PLC任务进度弹窗 -->
 </body>
 </html>

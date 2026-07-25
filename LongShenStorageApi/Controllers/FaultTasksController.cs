@@ -36,4 +36,52 @@ public class FaultTasksController : ControllerBase
 
         return Ok(new { message = "故障已处理" });
     }
+
+    /// <summary>重试故障任务（用已保存的数据重新执行入库/出库）</summary>
+    [HttpPost("{id}/retry")]
+    public IActionResult RetryTask(Guid id, [FromBody] RetryFaultRequest? request)
+    {
+        var tasks = _repo.GetFaultTasks();
+        var task = tasks.FirstOrDefault(t => t.Id == id);
+        if (task is null)
+            return NotFound(new { error = "故障任务不存在" });
+
+        var operatorName = request?.OperatorName ?? task.OperatorName;
+
+        // 根据任务类型重新执行
+        string result;
+        if (task.TaskType == "Inbound")
+        {
+            result = _repo.ResolveFaultTask(new ResolveFaultRequest
+            {
+                FaultId = id,
+                Action = "已处理入库",
+                OperatorName = operatorName
+            });
+        }
+        else if (task.TaskType == "Outbound")
+        {
+            result = _repo.ResolveFaultTask(new ResolveFaultRequest
+            {
+                FaultId = id,
+                Action = "已处理出库",
+                OperatorName = operatorName
+            });
+        }
+        else
+        {
+            return BadRequest(new { error = "未知的任务类型" });
+        }
+
+        if (!string.IsNullOrEmpty(result))
+            return BadRequest(new { error = result });
+
+        return Ok(new { message = "任务已重试执行成功" });
+    }
+}
+
+/// <summary>重试请求</summary>
+public sealed class RetryFaultRequest
+{
+    public string? OperatorName { get; set; }
 }

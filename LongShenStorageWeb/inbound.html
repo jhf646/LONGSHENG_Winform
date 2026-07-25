@@ -66,19 +66,9 @@
         <div class="btn-group">
           <button class="btn btn-primary" onclick="handleInbound()">📥 入库确认</button>
           <button class="btn" onclick="clearInbound()">🗑️ 清空</button>
+          <button class="btn btn-warning" onclick="resetPlc(this)">🔧 执行PLC复位</button>
+          <div class="reset-result" style="margin-top:8px;font-size:13px;display:none;width:100%"></div>
         </div>
-      </div>
-    </div>
-
-    <div class="card"><div class="card-header">📋 最近入库</div>
-      <div class="card-body"><div class="table-wrap"><table class="data-table"><thead><tr><th>时间</th><th>托盘号</th><th>操作人</th><th>货位</th></tr></thead><tbody id="inboundRecentBody"></tbody></table></div></div>
-    </div>
-
-    <div class="card"><div class="card-header">🔧 PLC复位</div>
-      <div class="card-body">
-        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">当立库处于故障状态(4009=3)时，可发送复位指令清除故障。</p>
-        <button class="btn btn-warning" onclick="resetPlc(this)">🔧 执行PLC复位</button>
-        <div class="reset-result" style="margin-top:8px;font-size:13px;display:none"></div>
       </div>
     </div>
 
@@ -90,6 +80,10 @@
           </table>
         </div>
       </div>
+    </div>
+
+    <div class="card"><div class="card-header">📋 最近入库</div>
+      <div class="card-body"><div class="table-wrap"><table class="data-table"><thead><tr><th>时间</th><th>托盘号</th><th>操作人</th><th>货位</th></tr></thead><tbody id="inboundRecentBody"></tbody></table></div></div>
     </div>
 
   </div>
@@ -290,14 +284,39 @@ async function loadFaultTasks() {
                 ? '<tr><td colspan="8" class="empty-state">暂无故障任务</td></tr>'
                 : inboundTasks.map(t => {
                     const isPending = t.status === 'Pending';
-                    return '<tr><td>' + formatTime(t.faultTime) + '</td><td>' + (t.palletNumber || '-') + '</td><td>' + (t.toolingNumber || '-') + '</td><td>' + (t.modelType || '-') + '</td><td>' + (t.slotCode || '-') + '</td><td>' + (t.faultReason || '-') + '</td><td>' + (isPending ? '<span style="color:#d92d20;font-weight:bold">⚠️ 待处理</span>' : '<span style="color:#079455;font-weight:bold">✅ ' + t.resolveAction + '</span>') + '</td><td>' + (isPending ? '<button class="btn btn-sm btn-warning" onclick="retryFault(\'' + t.id + '\')">🔄 重试</button>' : '-') + '</td></tr>';
+                    var statusHtml = isPending ? '<span style="color:#d92d20;font-weight:bold">⚠️ 待处理</span>' : '<span style="color:#079455;font-weight:bold">✅ ' + t.resolveAction + '</span>';
+                    var actionHtml = isPending ? '<button class="btn btn-sm btn-warning" onclick="showFaultModal(\'' + t.id + '\')">🔧 故障处理</button>' : '-';
+                    return '<tr><td>' + formatTime(t.faultTime) + '</td><td>' + (t.palletNumber || '-') + '</td><td>' + (t.toolingNumber || '-') + '</td><td>' + (t.modelType || '-') + '</td><td>' + (t.slotCode || '-') + '</td><td style="color:#d92d20;font-size:12px">' + (t.faultReason || '-') + '</td><td>' + statusHtml + '</td><td>' + actionHtml + '</td></tr>';
                 }).join('');
         }
     } catch(e) {}
 }
 
-async function retryFault(id) {
-    try { await api('/faulttasks/' + id + '/retry', { method: 'POST' }); toast('已重新提交'); loadFaultTasks(); } catch(e) { toast('重试失败', 'error'); }
+async function showFaultModal(faultId) {
+    const tasks = await api('/faulttasks');
+    const task = tasks.find(t => t.id === faultId);
+    if (!task) { toast('故障任务不存在', 'error'); return; }
+    document.getElementById('faultInfo').innerHTML = '<strong>📥 入库故障</strong><br>时间: ' + formatTime(task.faultTime) + '<br>位置: ' + (task.slotCode || '-') + '<br>原因: ' + task.faultReason + '<br>托盘: ' + (task.palletNumber || '-') + ' | 工装: ' + (task.toolingNumber || '-');
+    document.getElementById('faultActions').innerHTML =
+        '<button class="btn btn-primary" onclick="resolveFault(\'' + faultId + '\', \'已处理入库\')" style="width:100%;padding:12px">✅ 已处理入库 — 保存库存数据</button>' +
+        '<button class="btn btn-outline" onclick="resolveFault(\'' + faultId + '\', \'未处理入库\')" style="width:100%;padding:12px">❌ 未处理入库 — 清除库存数据</button>';
+    document.getElementById('faultModal').classList.remove('hidden');
+}
+
+async function resolveFault(faultId, action) {
+    var operator = currentUser ? currentUser.displayName : '系统';
+    try {
+        await api('/faulttasks/resolve', {
+            method: 'POST',
+            body: JSON.stringify({ faultId: faultId, action: action, operatorName: operator })
+        });
+        toast('✅ 故障已处理: ' + action, 'success');
+        closeFaultModal();
+        await loadFaultTasks();
+        loadInboundRecent();
+    } catch(e) {
+        toast('❌ 处理失败: ' + e.message, 'error');
+    }
 }
 
 async function resetPlc(btn) {
