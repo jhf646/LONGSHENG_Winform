@@ -1,5 +1,5 @@
 // ===== 氢晨库存管理系统 Web v3 =====
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = window.location.origin + '/api';
 let authToken = localStorage.getItem('ls_token') || '';
 let currentUser = null;
 try { currentUser = JSON.parse(localStorage.getItem('ls_user') || 'null'); } catch(e) { localStorage.removeItem('ls_user'); }
@@ -136,10 +136,18 @@ async function initApp() {
     loadInboundRecent(); loadOutboundRecent();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    if (authToken && currentUser) {
-        hideLogin(); updateUserUI(); applyPagePermissions(); initApp();
-    } else {
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        if (authToken && currentUser) {
+            hideLogin();
+            updateUserUI();
+            applyPagePermissions();
+            await initApp();
+        } else {
+            showLogin();
+        }
+    } catch(e) {
+        console.error('初始化异常:', e);
         showLogin();
     }
     // 启动时钟

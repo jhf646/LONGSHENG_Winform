@@ -1,0 +1,4 @@
+﻿[16:14:10.055] [INFO] ModbusTcpClientService 初始化: 192.168.1.88:502 站号=1
+[16:16:54.984] [INFO] ModbusTcpClientService 初始化: 192.168.1.88:502 站号=1
+[16:29:54.141] [INFO] PLC 未连接，触发自动连接...
+[16:29:57.149] [ERROR] PLC 连接失败 192.168.1.88:502 - The operation was canceled.

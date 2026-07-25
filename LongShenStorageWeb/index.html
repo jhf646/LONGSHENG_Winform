@@ -12,7 +12,7 @@ async function handleLogin() {
     const password = document.getElementById('loginPass').value;
     if (!username || !password) { alert('请输入用户名和密码'); return; }
     try {
-        const resp = await fetch('/api/auth/login', {
+        const resp = await fetch(window.location.origin + '/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
@@ -21,7 +21,7 @@ async function handleLogin() {
         const data = await resp.json();
         localStorage.setItem('ls_token', data.token);
         localStorage.setItem('ls_user', JSON.stringify(data));
-        location.reload();
+        window.location.href = '/';
     } catch(e) { alert('登录失败: ' + e.message); }
 }
 </script>
