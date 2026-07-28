@@ -186,12 +186,14 @@ async function handleOutbound() {
             document.getElementById('plcStep_' + n) ? updatePlcStep(n, s.detail || s.name, status) : addPlcStep(n, s.name, s.detail || '', status);
         });
         if (resp.success) {
+            document.getElementById('plcTaskTitle').textContent = '📤 出库任务结束';
             document.getElementById('plcTaskProgress').style.width = '100%';
             toast('✅ 出库成功', 'success');
             document.getElementById('outboundSelectedCard').style.display = 'none';
             selectedOutboundId = null;
             loadOutboundInventory(); loadOutboundRecent();
         } else {
+            document.getElementById('plcTaskTitle').textContent = '📤 出库任务结束';
             document.getElementById('plcTaskProgress').style.width = '100%';
             document.getElementById('plcTaskProgress').style.background = 'var(--danger)';
             toast('❌ ' + (resp.error || '出库失败'), 'error');
@@ -199,6 +201,7 @@ async function handleOutbound() {
         }
     } catch(e) {
         addPlcLog('[' + new Date().toLocaleTimeString() + '] ❌ 异常: ' + e.message);
+        document.getElementById('plcTaskTitle').textContent = '📤 出库任务结束';
         toast('❌ 出库异常: ' + e.message, 'error');
     }
     document.getElementById('plcTaskCloseBtn').classList.remove('hidden');

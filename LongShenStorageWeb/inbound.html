@@ -197,6 +197,7 @@ async function handleInbound() {
             document.getElementById('plcStep_' + n) ? updatePlcStep(n, s.detail || s.name, status) : addPlcStep(n, s.name, s.detail || '', status);
         });
         if (resp.success) {
+            document.getElementById('plcTaskTitle').textContent = '📥 入库任务结束';
             document.getElementById('plcTaskProgress').style.width = '100%';
             toast('✅ 入库成功', 'success');
             lastWorkOrder = document.getElementById('inWorkOrder').value.trim();
@@ -206,6 +207,7 @@ async function handleInbound() {
             document.getElementById('inCellNumber').value = lastCellNumber;
             loadInboundRecent();
         } else {
+            document.getElementById('plcTaskTitle').textContent = '📥 入库任务结束';
             document.getElementById('plcTaskProgress').style.width = '100%';
             document.getElementById('plcTaskProgress').style.background = 'var(--danger)';
             toast('❌ ' + (resp.error || '入库失败'), 'error');
@@ -213,6 +215,7 @@ async function handleInbound() {
         }
     } catch (e) {
         addPlcLog('[' + new Date().toLocaleTimeString() + '] ❌ 异常: ' + e.message);
+        document.getElementById('plcTaskTitle').textContent = '📥 入库任务结束';
         toast('❌ 入库异常: ' + e.message, 'error');
     }
     document.getElementById('plcTaskCloseBtn').classList.remove('hidden');
