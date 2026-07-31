@@ -302,6 +302,18 @@ async function handleInbound() {
         // 步骤2: 查询推荐货位（根据托盘号匹配内部编号）
         addPlcStep(2, '查询推荐货位', '', 'active');
         const state = await api('/appstate');
+        // 托盘号查重：已在库中则直接提示，禁止重复入库
+        const palletKey = (palletNumber.match(/\d+/) || [''])[0].padStart(3, '0');
+        const alreadyInStock = (state.inventory || []).some(i => {
+            const d = (i.palletNumber || '').match(/\d+/);
+            return (d ? d[0].padStart(3, '0') : '') === palletKey;
+        });
+        if (alreadyInStock) {
+            updatePlcStep(2, '该库位已占用，无法入库', 'error');
+            toast('❌ 该库位已占用，无法入库', 'error');
+            document.getElementById('plcTaskCloseBtn').classList.remove('hidden');
+            return;
+        }
         // 从托盘号提取数字匹配内部编号
         const numMatch = palletNumber.match(/\d+/);
         let targetSlot = null;

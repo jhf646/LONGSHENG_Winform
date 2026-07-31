@@ -374,6 +374,9 @@ public sealed class SqlServerRepository
     public WorkpieceRecord? Inbound(InboundRequest request)
     {
         var state = Load();
+        // 防止同一托盘号重复入库（兜底保护）
+        if (state.Inventory.Any(r => NormalizePallet(r.PalletNumber) == NormalizePallet(request.PalletNumber)))
+            return null;
         var targetSlot = ResolveTargetSlot(state, request.SpecifiedSlot, request.PalletNumber);
         if (targetSlot is null) return null;
 
@@ -450,6 +453,21 @@ public sealed class SqlServerRepository
         });
         Save(state);
         return true;
+    }
+
+    /// <summary>托盘号是否已在库中（防止重复入库）</summary>
+    public bool IsPalletInStock(string? palletNumber)
+    {
+        if (string.IsNullOrWhiteSpace(palletNumber)) return false;
+        return LoadInventory().Any(r => NormalizePallet(r.PalletNumber) == NormalizePallet(palletNumber));
+    }
+
+    /// <summary>托盘号归一化：提取数字并补零为三位（"15"/"015"/"T015" → "015"）</summary>
+    private static string NormalizePallet(string? palletNumber)
+    {
+        var digits = new string((palletNumber ?? "").Where(char.IsDigit).ToArray());
+        if (digits.Length > 3) digits = digits.Substring(digits.Length - 3);
+        return digits.PadLeft(3, '0');
     }
 
     private static StorageSlot? ResolveTargetSlot(AppState state, string? specifiedSlot, string? palletNumber)

@@ -38,6 +38,10 @@ public class WorkpieceRecordsController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.OperatorName))
             return BadRequest(new { error = "请输入操作人员" });
 
+        // 托盘号已在库中则禁止重复入库
+        if (_repo.IsPalletInStock(request.PalletNumber))
+            return BadRequest(new { error = "该库位已占用，无法入库" });
+
         var result = _repo.Inbound(request);
         if (result is null)
             return BadRequest(new { error = "当前无空闲货位可分配或指定货位不可用" });

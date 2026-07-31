@@ -328,6 +328,15 @@ public class DeviceController : ControllerBase
             logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 写入数据库...");
             try
             {
+                // 托盘号查重：已在库中则禁止重复入库
+                if (_repo.IsPalletInStock(request.PalletNumber))
+                {
+                    var dupMsg = $"托盘{request.PalletNumber}已在库中，无法重复入库";
+                    _logger.Error(dupMsg);
+                    logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ❌ {dupMsg}");
+                    steps.Add(new { step = 5, name = "数据库写入", detail = "失败：该托盘已在库中", raw = "" });
+                    return Ok(new { success = false, error = "该库位已占用，无法入库", steps, logs = logEntries });
+                }
                 var record = _repo.Inbound(new InboundRequest
                 {
                     PalletNumber = request.PalletNumber,
