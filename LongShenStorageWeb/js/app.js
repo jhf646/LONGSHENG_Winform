@@ -140,10 +140,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadDropdowns() {
     try {
         const data = await api('/appstate/dropdowns');
-        ['dlPallet','dlTooling','dlProject','dlModel','dlCustomer'].forEach((id, i) => {
-            const keys = ['palletNumbers','toolingNumbers','projectNumbers','modelTypes','customerNames'];
+        ['dlPallet','dlTooling','dlProject','dlModel','dlCustomer','dlWorkOrder','dlCellNumber'].forEach((id, i) => {
+            const keys = ['palletNumbers','toolingNumbers','projectNumbers','modelTypes','customerNames','workOrders','cellNumbers'];
             document.getElementById(id).innerHTML = (data[keys[i]] || []).map(v => `<option value="${v}">`).join('');
         });
+        // 组件节数档位 1~20
+        const dlComp = document.getElementById('dlComponentSections');
+        if (dlComp) dlComp.innerHTML = Array.from({ length: 20 }, (_, i) => `<option value="${i + 1}">`).join('');
     } catch (e) { console.warn('加载下拉选项失败:', e); }
 }
 

@@ -213,6 +213,8 @@ public sealed class SqlServerRepository
         state.ProjectNumbers = LoadDropdownOptions("ProjectNumber");
         state.ModelTypes = LoadDropdownOptions("ModelType");
         state.CustomerNames = LoadDropdownOptions("CustomerName");
+        state.WorkOrders = LoadDropdownOptions("WorkOrder");
+        state.CellNumbers = LoadDropdownOptions("CellNumber");
 
         // 从已有工件记录中提取并补充
         if (state.Inventory.Count > 0)
@@ -222,6 +224,8 @@ public sealed class SqlServerRepository
             AddUnique(state.ProjectNumbers, state.Inventory.Where(r => !string.IsNullOrWhiteSpace(r.ProjectNumber)).Select(r => r.ProjectNumber));
             AddUnique(state.ModelTypes, state.Inventory.Where(r => !string.IsNullOrWhiteSpace(r.ModelType)).Select(r => r.ModelType));
             AddUnique(state.CustomerNames, state.Inventory.Where(r => !string.IsNullOrWhiteSpace(r.CustomerName)).Select(r => r.CustomerName));
+            AddUnique(state.WorkOrders, state.Inventory.Where(r => !string.IsNullOrWhiteSpace(r.WorkOrder)).Select(r => r.WorkOrder));
+            AddUnique(state.CellNumbers, state.Inventory.Where(r => !string.IsNullOrWhiteSpace(r.CellNumber)).Select(r => r.CellNumber));
         }
 
         // 默认托盘号

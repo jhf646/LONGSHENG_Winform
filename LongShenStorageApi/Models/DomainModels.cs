@@ -89,6 +89,8 @@ public sealed class AppState
     public List<string> ProjectNumbers { get; set; } = new();
     public List<string> ModelTypes { get; set; } = new();
     public List<string> CustomerNames { get; set; } = new();
+    public List<string> WorkOrders { get; set; } = new();
+    public List<string> CellNumbers { get; set; } = new();
 }
 
 /// <summary>

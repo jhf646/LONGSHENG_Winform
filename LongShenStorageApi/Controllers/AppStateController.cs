@@ -64,7 +64,9 @@ public class AppStateController : ControllerBase
             state.ToolingNumbers,
             state.ProjectNumbers,
             state.ModelTypes,
-            state.CustomerNames
+            state.CustomerNames,
+            state.WorkOrders,
+            state.CellNumbers
         });
     }
 

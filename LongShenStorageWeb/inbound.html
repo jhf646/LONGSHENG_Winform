@@ -54,14 +54,14 @@
           <div class="form-group"><label>工装号</label><input id="inTooling" list="dlTooling" placeholder="自行输入"></div>
           <div class="form-group"><label>项目号</label><input id="inProject" list="dlProject" placeholder="自行输入"></div>
           <div class="form-group"><label>型号</label><input id="inModel" list="dlModel" placeholder="字母+数字"></div>
-          <div class="form-group"><label>工单号</label><input id="inWorkOrder" placeholder="批次入库保留"></div>
-          <div class="form-group"><label>电解槽编号</label><input id="inCellNumber" placeholder="批次入库保留"></div>
-          <div class="form-group"><label>组件节数</label><input type="number" id="inComponentSections" min="1" max="20" value="1"></div>
+          <div class="form-group"><label>工单号</label><input id="inWorkOrder" list="dlWorkOrder" placeholder="批次入库保留"></div>
+          <div class="form-group"><label>电解槽编号</label><input id="inCellNumber" list="dlCellNumber" placeholder="批次入库保留"></div>
+          <div class="form-group"><label>组件节数</label><input type="number" id="inComponentSections" list="dlComponentSections" min="1" max="20" value="1"></div>
           <div class="form-group"><label>客户名称</label><input id="inCustomer" list="dlCustomer" placeholder="自行输入"></div>
           <div class="form-group"><label>操作人员</label><input id="inOperator" readonly style="background:#f5f5f5;cursor:not-allowed"></div>
           <div class="form-group full"><label>备注</label><textarea id="inNotes"></textarea></div>
         </div>
-        <datalist id="dlPallet"></datalist><datalist id="dlTooling"></datalist><datalist id="dlProject"></datalist><datalist id="dlModel"></datalist><datalist id="dlCustomer"></datalist>
+        <datalist id="dlPallet"></datalist><datalist id="dlTooling"></datalist><datalist id="dlProject"></datalist><datalist id="dlModel"></datalist><datalist id="dlCustomer"></datalist><datalist id="dlWorkOrder"></datalist><datalist id="dlCellNumber"></datalist><datalist id="dlComponentSections"></datalist>
         <div class="btn-group">
           <button class="btn btn-primary" onclick="handleInbound()">📥 入库确认</button>
           <button class="btn" onclick="clearInbound()">🗑️ 清空</button>
@@ -245,10 +245,13 @@ async function loadInboundRecent() {
 async function loadDropdowns() {
     try {
         const data = await api('/appstate/dropdowns');
-        ['dlPallet','dlTooling','dlProject','dlModel','dlCustomer'].forEach((id, i) => {
-            const keys = ['palletNumbers','toolingNumbers','projectNumbers','modelTypes','customerNames'];
+        ['dlPallet','dlTooling','dlProject','dlModel','dlCustomer','dlWorkOrder','dlCellNumber'].forEach((id, i) => {
+            const keys = ['palletNumbers','toolingNumbers','projectNumbers','modelTypes','customerNames','workOrders','cellNumbers'];
             document.getElementById(id).innerHTML = (data[keys[i]] || []).map(v => '<option value="' + v + '">').join('');
         });
+        // 组件节数档位 1~20
+        const dlComp = document.getElementById('dlComponentSections');
+        if (dlComp) dlComp.innerHTML = Array.from({ length: 20 }, (_, i) => '<option value="' + (i + 1) + '">').join('');
     } catch (e) { console.warn('加载下拉选项失败:', e); }
 }
 
