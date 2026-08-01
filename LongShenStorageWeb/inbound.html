@@ -134,6 +134,7 @@ let lastWorkOrder = '', lastCellNumber = '';
 loadInboundRecent();
 loadFaultTasks();
 loadDropdowns();
+loadLastInbound();
 if (currentUser) document.getElementById('inOperator').value = currentUser.displayName || '';
 
 function clearInbound() {
@@ -212,11 +213,11 @@ async function handleInbound() {
             document.getElementById('plcTaskTitle').textContent = '📥 入库任务结束';
             document.getElementById('plcTaskProgress').style.width = '100%';
             toast('✅ 入库成功', 'success');
-            lastWorkOrder = document.getElementById('inWorkOrder').value.trim();
-            lastCellNumber = document.getElementById('inCellNumber').value.trim();
-            clearInbound();
-            document.getElementById('inWorkOrder').value = lastWorkOrder;
-            document.getElementById('inCellNumber').value = lastCellNumber;
+            // 保留表单信息（除托盘号、工装号外），便于连续入库
+            document.getElementById('inPallet').value = '';
+            document.getElementById('inTooling').value = '';
+            const palletInput = document.getElementById('inPallet');
+            if (palletInput) palletInput.focus();
             loadInboundRecent();
         } else {
             document.getElementById('plcTaskTitle').textContent = '📥 入库任务结束';
@@ -253,6 +254,21 @@ async function loadDropdowns() {
         const dlComp = document.getElementById('dlComponentSections');
         if (dlComp) dlComp.innerHTML = Array.from({ length: 20 }, (_, i) => '<option value="' + (i + 1) + '">').join('');
     } catch (e) { console.warn('加载下拉选项失败:', e); }
+}
+
+// 页面打开时自动填入上次入库信息（除托盘号、工装号外）
+async function loadLastInbound() {
+    try {
+        const entries = await api('/ledgerentries');
+        const last = (entries || []).find(e => e.type === 0 || e.type === 'Inbound'); // 0=入库
+        if (!last) return;
+        if (last.projectNumber) document.getElementById('inProject').value = last.projectNumber;
+        if (last.modelType) document.getElementById('inModel').value = last.modelType;
+        if (last.workOrder) document.getElementById('inWorkOrder').value = last.workOrder;
+        if (last.cellNumber) document.getElementById('inCellNumber').value = last.cellNumber;
+        if (last.componentSections) document.getElementById('inComponentSections').value = last.componentSections;
+        if (last.customerName) document.getElementById('inCustomer').value = last.customerName;
+    } catch (e) { /* 忽略 */ }
 }
 
 function showPlcTaskModal(title) {

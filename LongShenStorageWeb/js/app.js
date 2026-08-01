@@ -103,6 +103,7 @@ function updateClock() {
 }
 async function initApp() {
     await Promise.all([loadDashboard(), loadDropdowns()]);
+    loadLastInbound();
     const now = new Date();
     document.getElementById('ledgerStart').value = new Date(now.getTime() - 7*86400000).toISOString().slice(0,16);
     document.getElementById('ledgerEnd').value = now.toISOString().slice(0,16);
@@ -148,6 +149,21 @@ async function loadDropdowns() {
         const dlComp = document.getElementById('dlComponentSections');
         if (dlComp) dlComp.innerHTML = Array.from({ length: 20 }, (_, i) => `<option value="${i + 1}">`).join('');
     } catch (e) { console.warn('加载下拉选项失败:', e); }
+}
+
+// 页面打开时自动填入上次入库信息（除托盘号、工装号外）
+async function loadLastInbound() {
+    try {
+        const entries = await api('/ledgerentries');
+        const last = (entries || []).find(e => e.type === 0 || e.type === 'Inbound'); // 0=入库
+        if (!last) return;
+        if (last.projectNumber) document.getElementById('inProject').value = last.projectNumber;
+        if (last.modelType) document.getElementById('inModel').value = last.modelType;
+        if (last.workOrder) document.getElementById('inWorkOrder').value = last.workOrder;
+        if (last.cellNumber) document.getElementById('inCellNumber').value = last.cellNumber;
+        if (last.componentSections) document.getElementById('inComponentSections').value = last.componentSections;
+        if (last.customerName) document.getElementById('inCustomer').value = last.customerName;
+    } catch (e) { /* 忽略 */ }
 }
 
 // ===== 仪表盘 =====
@@ -371,9 +387,6 @@ async function handleInbound() {
         if (resp.success) {
             document.getElementById('plcTaskProgress').style.width = '100%';
             toast('✅ 入库成功', 'success');
-            // 保存批次信息
-            lastWorkOrder = document.getElementById('inWorkOrder').value.trim();
-            lastCellNumber = document.getElementById('inCellNumber').value.trim();
             // 保存下拉选项
             const tooling = document.getElementById('inTooling').value.trim();
             const project = document.getElementById('inProject').value.trim();
@@ -387,9 +400,11 @@ async function handleInbound() {
                 customerNames: customer ? [customer] : [], workOrders: workOrder ? [workOrder] : [],
                 cellNumbers: cellNumber ? [cellNumber] : []
             }) }); } catch(e) {}
-            clearInbound();
-            document.getElementById('inWorkOrder').value = lastWorkOrder;
-            document.getElementById('inCellNumber').value = lastCellNumber;
+            // 保留表单信息（除托盘号、工装号外），便于连续入库
+            document.getElementById('inPallet').value = '';
+            document.getElementById('inTooling').value = '';
+            const palletInput = document.getElementById('inPallet');
+            if (palletInput) palletInput.focus();
             await Promise.all([loadDashboard(), loadDropdowns()]);
             loadInboundRecent();
         } else {
