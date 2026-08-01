@@ -421,6 +421,14 @@ public sealed class SqlServerRepository
             ActionDescription = $"托盘{record.PalletNumber}入库至 {targetSlot.SlotCode}"
         });
         Save(state);
+        // 入库成功后持久化下拉选项，保证出库后提示仍保留（不依赖前端是否调用保存接口）
+        SaveDropdownOption("PalletNumber", record.PalletNumber);
+        SaveDropdownOption("ToolingNumber", record.ToolingNumber);
+        SaveDropdownOption("ProjectNumber", record.ProjectNumber);
+        SaveDropdownOption("ModelType", record.ModelType);
+        SaveDropdownOption("WorkOrder", record.WorkOrder);
+        SaveDropdownOption("CellNumber", record.CellNumber);
+        SaveDropdownOption("CustomerName", record.CustomerName);
         return record;
     }
 

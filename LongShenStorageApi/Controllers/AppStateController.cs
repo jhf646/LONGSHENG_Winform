@@ -90,6 +90,8 @@ public class AppStateController : ControllerBase
         SaveDropdownCategory(state, updatedState.ProjectNumbers, "ProjectNumber");
         SaveDropdownCategory(state, updatedState.ModelTypes, "ModelType");
         SaveDropdownCategory(state, updatedState.CustomerNames, "CustomerName");
+        SaveDropdownCategory(state, updatedState.WorkOrders, "WorkOrder");
+        SaveDropdownCategory(state, updatedState.CellNumbers, "CellNumber");
         _repo.Save(state);
         return Ok(new { message = "下拉选项已保存" });
     }
@@ -116,6 +118,8 @@ public class AppStateController : ControllerBase
             case "ProjectNumber": state.ProjectNumbers = loaded; break;
             case "ModelType": state.ModelTypes = loaded; break;
             case "CustomerName": state.CustomerNames = loaded; break;
+            case "WorkOrder": state.WorkOrders = loaded; break;
+            case "CellNumber": state.CellNumbers = loaded; break;
         }
     }
 }

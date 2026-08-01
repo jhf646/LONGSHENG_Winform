@@ -379,10 +379,13 @@ async function handleInbound() {
             const project = document.getElementById('inProject').value.trim();
             const model = document.getElementById('inModel').value.trim();
             const customer = document.getElementById('inCustomer').value.trim();
+            const workOrder = document.getElementById('inWorkOrder').value.trim();
+            const cellNumber = document.getElementById('inCellNumber').value.trim();
             try { await api('/appstate/dropdowns', { method: 'POST', body: JSON.stringify({
                 palletNumbers: [palletNumber], toolingNumbers: tooling ? [tooling] : [],
                 projectNumbers: project ? [project] : [], modelTypes: model ? [model] : [],
-                customerNames: customer ? [customer] : []
+                customerNames: customer ? [customer] : [], workOrders: workOrder ? [workOrder] : [],
+                cellNumbers: cellNumber ? [cellNumber] : []
             }) }); } catch(e) {}
             clearInbound();
             document.getElementById('inWorkOrder').value = lastWorkOrder;
