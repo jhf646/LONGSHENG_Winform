@@ -195,7 +195,7 @@ function renderSlotVisual(containerId, slots) {
                         ? `<div class="slot-status" style="font-size:9px;color:#667085">🚪总出入口</div>`
                         : isDisabled
                         ? `<div class="slot-status" style="font-size:9px;color:#999">⚪禁用</div>`
-                        : `<div class="slot-status">${slot.isOccupied ? '🔴占用' : '🟢空闲 ' + String(slot.internalNumber).padStart(3, '0')}</div>`;
+                        : `<div class="slot-status">${slot.isOccupied ? '🔴占用' : '🟢空闲'} ${String(slot.internalNumber).padStart(3, '0')}</div>`;
                     cell.title = `${slot.slotCode} (内部编号: ${String(slot.internalNumber).padStart(3, '0')})${isDisabled ? ' [已禁用]' : ''}`;
                 }
                 grid.appendChild(cell);
