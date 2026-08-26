@@ -54,6 +54,23 @@ public sealed class SlotUpdateRequest
     public bool IsEnabled { get; set; } = true;
 }
 
+/// <summary>
+/// 手动占用库位请求（无货变有货，占用后可出库）
+/// </summary>
+public sealed class OccupySlotRequest
+{
+    public string PalletNumber { get; set; } = string.Empty;
+    public string ToolingNumber { get; set; } = string.Empty;
+    public string ProjectNumber { get; set; } = string.Empty;
+    public string ModelType { get; set; } = string.Empty;
+    public string WorkOrder { get; set; } = string.Empty;
+    public string CellNumber { get; set; } = string.Empty;
+    public int ComponentSections { get; set; } = 1;
+    public string CustomerName { get; set; } = string.Empty;
+    public string OperatorName { get; set; } = string.Empty;
+    public string Notes { get; set; } = string.Empty;
+}
+
 public sealed class LedgerEntry
 {
     [DisplayName("编号")] public Guid Id { get; set; } = Guid.NewGuid();

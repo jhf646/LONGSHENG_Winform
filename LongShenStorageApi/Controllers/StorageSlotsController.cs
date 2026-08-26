@@ -61,6 +61,22 @@ public class StorageSlotsController : ControllerBase
         return Ok(new { message = $"货位 {slot.SlotCode} 已更新" });
     }
 
+    /// <summary>手动占用库位：无货变有货（创建工件记录并关联到指定库位，占用后即可出库）</summary>
+    [HttpPost("{slotCode}/occupy")]
+    public ActionResult<object> Occupy(string slotCode, [FromBody] OccupySlotRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.PalletNumber))
+            return BadRequest(new { error = "请输入托盘号" });
+        if (string.IsNullOrWhiteSpace(request.OperatorName))
+            return BadRequest(new { error = "请输入操作人员" });
+
+        var record = _repo.OccupySlot(slotCode, request);
+        if (record is null)
+            return BadRequest(new { error = "占用失败：库位不存在、已被占用或托盘号已在库中" });
+
+        return Ok(new { message = $"库位 {slotCode} 已占用", record });
+    }
+
     /// <summary>异常释放：清空库位信息（强制释放，会删除工件记录）</summary>
     [HttpPost("{slotCode}/abnormal-release")]
     public IActionResult AbnormalRelease(string slotCode)

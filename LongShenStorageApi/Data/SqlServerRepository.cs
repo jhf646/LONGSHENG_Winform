@@ -467,6 +467,64 @@ public sealed class SqlServerRepository
         return true;
     }
 
+    /// <summary>手动占用库位：无货变有货（创建工件记录并关联到指定库位，占用后即可出库）</summary>
+    public WorkpieceRecord? OccupySlot(string slotCode, OccupySlotRequest request)
+    {
+        var state = Load();
+        var slot = state.Slots.FirstOrDefault(s => s.SlotCode.Equals(slotCode, StringComparison.OrdinalIgnoreCase));
+        if (slot is null || slot.IsOccupied) return null;
+        // 托盘号已在库中则禁止重复占用
+        if (state.Inventory.Any(r => NormalizePallet(r.PalletNumber) == NormalizePallet(request.PalletNumber)))
+            return null;
+
+        var record = new WorkpieceRecord
+        {
+            PalletNumber = request.PalletNumber,
+            ToolingNumber = request.ToolingNumber,
+            ProjectNumber = request.ProjectNumber,
+            ModelType = request.ModelType,
+            WorkOrder = request.WorkOrder,
+            CellNumber = request.CellNumber,
+            ComponentSections = request.ComponentSections,
+            CustomerName = request.CustomerName,
+            SlotCode = slot.SlotCode,
+            InboundTime = DateTime.Now,
+            LastOperator = request.OperatorName,
+            LastUpdated = DateTime.Now,
+            Notes = request.Notes
+        };
+
+        slot.IsOccupied = true;
+        slot.WorkpieceId = record.Id;
+        state.Inventory.Add(record);
+        state.Ledger.Add(new LedgerEntry
+        {
+            Type = TransactionType.Inbound,
+            Timestamp = DateTime.Now,
+            OperatorName = request.OperatorName,
+            PalletNumber = record.PalletNumber,
+            ToolingNumber = record.ToolingNumber,
+            ProjectNumber = record.ProjectNumber,
+            ModelType = record.ModelType,
+            WorkOrder = record.WorkOrder,
+            CellNumber = record.CellNumber,
+            ComponentSections = record.ComponentSections,
+            CustomerName = record.CustomerName,
+            SlotCode = record.SlotCode,
+            ActionDescription = $"手动占用：托盘{record.PalletNumber}占用库位 {slot.SlotCode}"
+        });
+        Save(state);
+        // 占用成功后持久化下拉选项，供后续出入库提示使用
+        SaveDropdownOption("PalletNumber", record.PalletNumber);
+        SaveDropdownOption("ToolingNumber", record.ToolingNumber);
+        SaveDropdownOption("ProjectNumber", record.ProjectNumber);
+        SaveDropdownOption("ModelType", record.ModelType);
+        SaveDropdownOption("WorkOrder", record.WorkOrder);
+        SaveDropdownOption("CellNumber", record.CellNumber);
+        SaveDropdownOption("CustomerName", record.CustomerName);
+        return record;
+    }
+
     /// <summary>托盘号是否已在库中（防止重复入库）</summary>
     public bool IsPalletInStock(string? palletNumber)
     {
