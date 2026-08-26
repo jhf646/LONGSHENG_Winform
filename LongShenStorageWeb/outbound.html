@@ -166,6 +166,13 @@ async function handleOutbound() {
     const slotMatch = item.slotCode.match(/(\d+)排-(\d+)列-(\d+)层/);
     if (!slotMatch) { toast('货位编码解析失败', 'error'); return; }
     const row = parseInt(slotMatch[1]), col = parseInt(slotMatch[2]), level = parseInt(slotMatch[3]);
+    // 检查是否存在未处理的故障任务，有则先处理故障再执行
+    const faults = await api('/faulttasks').catch(() => []);
+    const pendingFaults = faults.filter(f => f.status === 'Pending');
+    if (pendingFaults.length > 0) {
+        toast('❌ 存在 ' + pendingFaults.length + ' 个未处理的故障任务，请先处理故障任务', 'error');
+        return;
+    }
     showPlcTaskModal('📤 出库任务执行中');
     addPlcStep(1, '查询PLC状态', '', 'active');
     try {

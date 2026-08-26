@@ -150,6 +150,13 @@ async function handleInbound() {
     if (!operator) { toast('请先登录', 'error'); return; }
     const palletNumber = document.getElementById('inPallet').value.trim();
     if (!palletNumber) { toast('请输入托盘号', 'error'); return; }
+    // 检查是否存在未处理的故障任务，有则先处理故障再执行
+    const faults = await api('/faulttasks').catch(() => []);
+    const pendingFaults = faults.filter(f => f.status === 'Pending');
+    if (pendingFaults.length > 0) {
+        toast('❌ 存在 ' + pendingFaults.length + ' 个未处理的故障任务，请先处理故障任务', 'error');
+        return;
+    }
     showPlcTaskModal('📥 入库任务执行中');
     addPlcStep(1, '查询PLC状态', '', 'active');
     try {
