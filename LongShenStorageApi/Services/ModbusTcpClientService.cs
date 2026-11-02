@@ -16,7 +16,8 @@ public sealed class ModbusTcpClientService : IModbusDevice, IDisposable
     private readonly FileLogger _logger;
     private TcpClient? _tcpClient;
     private IModbusMaster? _master;
-    private readonly object _lock = new();
+    // 串行化所有网络往返，避免原始帧与NModbus请求的应答互相串包
+    private readonly SemaphoreSlim _ioLock = new(1, 1);
     private bool _disposed;
 
     public bool IsConnected => _tcpClient?.Connected ?? false;
@@ -71,49 +72,130 @@ public sealed class ModbusTcpClientService : IModbusDevice, IDisposable
 
     public async Task<ushort> ReadHoldingRegisterAsync(int address)
     {
-        await EnsureConnectedAsync();
-        var result = await _master!.ReadHoldingRegistersAsync(_slaveId, (ushort)address, 1);
-        _logger.Info($"读取 D{address} = {result[0]}");
-        return result[0];
+        await _ioLock.WaitAsync();
+        try
+        {
+            await EnsureConnectedAsync();
+            await DiscardStaleDataAsync();
+            var result = await _master!.ReadHoldingRegistersAsync(_slaveId, (ushort)address, 1);
+            _logger.Info($"读取 D{address} = {result[0]}");
+            return result[0];
+        }
+        finally
+        {
+            _ioLock.Release();
+        }
     }
 
     public async Task<ushort[]> ReadHoldingRegistersAsync(int startAddress, int count)
     {
-        await EnsureConnectedAsync();
-        var result = await _master!.ReadHoldingRegistersAsync(_slaveId, (ushort)startAddress, (ushort)count);
-        var summary = string.Join(", ", result.Take(8));
-        _logger.Info($"批量读取 D{startAddress}~D{startAddress + count - 1} ({count}个) = [{summary}]");
-        return result;
+        await _ioLock.WaitAsync();
+        try
+        {
+            await EnsureConnectedAsync();
+            await DiscardStaleDataAsync();
+            var result = await _master!.ReadHoldingRegistersAsync(_slaveId, (ushort)startAddress, (ushort)count);
+            var summary = string.Join(", ", result.Take(8));
+            _logger.Info($"批量读取 D{startAddress}~D{startAddress + count - 1} ({count}个) = [{summary}]");
+            return result;
+        }
+        finally
+        {
+            _ioLock.Release();
+        }
     }
 
     public async Task WriteHoldingRegisterAsync(int address, ushort value)
     {
-        await EnsureConnectedAsync();
-        await _master!.WriteSingleRegisterAsync(_slaveId, (ushort)address, value);
-        _logger.Info($"写入 D{address} = {value}");
+        await _ioLock.WaitAsync();
+        try
+        {
+            await EnsureConnectedAsync();
+            await DiscardStaleDataAsync();
+            await _master!.WriteSingleRegisterAsync(_slaveId, (ushort)address, value);
+            _logger.Info($"写入 D{address} = {value}");
+        }
+        finally
+        {
+            _ioLock.Release();
+        }
     }
 
-    public async Task SendRawFrameAsync(byte[] frame)
+    /// <summary>发送原始帧并读取完整应答帧（MBAP头6字节 + 数据区）</summary>
+    public async Task<byte[]> SendRawFrameAsync(byte[] frame)
     {
-        await EnsureConnectedAsync();
-        var stream = _tcpClient!.GetStream();
-        await stream.WriteAsync(frame);
-        _logger.Info($"发送原始帧: {BitConverter.ToString(frame)}");
-        // 等待100ms读取响应
-        await Task.Delay(100);
-        if (stream.DataAvailable)
+        await _ioLock.WaitAsync();
+        try
         {
-            var response = new byte[256];
-            var len = await stream.ReadAsync(response, 0, response.Length);
-            var respData = new byte[len];
-            Array.Copy(response, respData, len);
-            _logger.Info($"收到响应: {BitConverter.ToString(respData)}");
+            await EnsureConnectedAsync();
+            var stream = _tcpClient!.GetStream();
+
+            // 丢弃缓存区中的历史残留数据，避免本次应答错位
+            await DiscardStaleDataAsync();
+
+            await stream.WriteAsync(frame);
+            _logger.Info($"发送原始帧: {BitConverter.ToString(frame)}");
+
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
+
+            // MBAP头: 事务号2 + 协议号2 + 长度2
+            var header = new byte[6];
+            await ReadExactAsync(stream, header, timeoutCts.Token, frame);
+
+            var bodyLength = (header[4] << 8) | header[5];
+            byte[] response = header;
+            if (bodyLength > 0)
+            {
+                response = new byte[6 + bodyLength];
+                Array.Copy(header, response, 6);
+                await ReadExactAsync(stream, response.AsMemory(6, bodyLength), timeoutCts.Token, frame);
+            }
+
+            _logger.Info($"收到响应: {BitConverter.ToString(response)}");
+            return response;
+        }
+        finally
+        {
+            _ioLock.Release();
         }
     }
 
     public void Tick()
     {
         // 真实设备无需模拟，留空
+    }
+
+    private async Task DiscardStaleDataAsync()
+    {
+        if (_tcpClient is not { Connected: true }) return;
+        var stream = _tcpClient.GetStream();
+        var stale = new byte[256];
+        while (stream.DataAvailable)
+        {
+            if (await stream.ReadAsync(stale, 0, stale.Length) <= 0) break;
+        }
+    }
+
+    private static async Task ReadExactAsync(NetworkStream stream, Memory<byte> buffer, CancellationToken token, byte[] frame)
+    {
+        var offset = 0;
+        while (offset < buffer.Length)
+        {
+            int read;
+            try
+            {
+                read = await stream.ReadAsync(buffer.Slice(offset), token);
+            }
+            catch (OperationCanceledException)
+            {
+                throw new TimeoutException($"PLC 3秒内未返回完整应答，发送帧: {BitConverter.ToString(frame)}");
+            }
+
+            if (read <= 0)
+                throw new IOException($"PLC 连接已断开，应答不完整，发送帧: {BitConverter.ToString(frame)}");
+
+            offset += read;
+        }
     }
 
     private async Task EnsureConnectedAsync()
@@ -131,5 +213,6 @@ public sealed class ModbusTcpClientService : IModbusDevice, IDisposable
         _disposed = true;
         _master?.Dispose();
         _tcpClient?.Dispose();
+        _ioLock.Dispose();
     }
 }

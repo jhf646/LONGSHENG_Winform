@@ -19,6 +19,13 @@ public class DeviceController : ControllerBase
     private readonly SqlServerRepository _repo;
     private readonly FaultCodeService _faultCode;
 
+    /// <summary>PLC任务残留检测指令：00 05 00 00 00 06 01 03 07 DC 00 01（读取D2012）</summary>
+    private static readonly byte[] TaskResidueFrame = { 0x00, 0x05, 0x00, 0x00, 0x00, 0x06, 0x01, 0x03, 0x07, 0xDC, 0x00, 0x01 };
+    /// <summary>D2012 任务残留标志寄存器地址</summary>
+    private const int TaskResidueAddress = 2012;
+    /// <summary>检测到任务残留时的提示语</summary>
+    private const string TaskResidueError = "检测到PLC中存在任务残留请重启PLC！";
+
     public DeviceController(IModbusDevice device, RegisterConfigService config, FileLogger logger, SqlServerRepository repo, FaultCodeService faultCode)
     {
         _device = device;
@@ -167,7 +174,9 @@ public class DeviceController : ControllerBase
             // 发送复位指令: 00 08 00 00 00 06 01 05 00 64 FF 00
             var resetFrame = new byte[] { 0x00, 0x08, 0x00, 0x00, 0x00, 0x06, 0x01, 0x05, 0x00, 0x64, 0xFF, 0x00 };
             _logger.Info($"发送复位指令: {BitConverter.ToString(resetFrame)}");
-            await _device.SendRawFrameAsync(resetFrame);
+            var resetResponse = await _device.SendRawFrameAsync(resetFrame);
+            if (resetResponse.Length > 0)
+                _logger.Info($"复位指令应答: {BitConverter.ToString(resetResponse)}");
 
             // 等待2秒后检测状态
             await Task.Delay(2000);
@@ -220,6 +229,18 @@ public class DeviceController : ControllerBase
             // 步骤1：查询PLC状态
             _logger.Info($"===== 入库任务开始 托盘:{request.PalletNumber} 位置:{request.Row}排/{request.Col}列/{request.Level}层 =====");
             logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 入库任务开始 - 托盘:{request.PalletNumber}");
+
+            // 任务下发前先检测PLC是否存在任务残留，残留时禁止下发任务
+            var residue = await CheckTaskResidueAsync(logEntries);
+            steps.Add(new
+            {
+                step = 0,
+                name = residue.Normal ? "PLC任务残留检测" : "PLC任务残留检测失败",
+                detail = residue.Detail,
+                raw = residue.Raw
+            });
+            if (!residue.Normal)
+                return Ok(new { success = false, error = residue.Error, steps, logs = logEntries });
 
             ushort status = await _device.ReadHoldingRegisterAsync(4009);
             var statusText = status switch { 1 => "空闲中", 2 => "运行中", 3 => "故障中", 4 => "暂停中", _ => $"未知({status})" };
@@ -409,6 +430,18 @@ public class DeviceController : ControllerBase
             _logger.Info($"===== 出库任务开始 记录ID:{request.RecordId} 位置:{request.Row}排/{request.Col}列/{request.Level}层 =====");
             logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 出库任务开始");
 
+            // 任务下发前先检测PLC是否存在任务残留，残留时禁止下发任务
+            var residue = await CheckTaskResidueAsync(logEntries);
+            steps.Add(new
+            {
+                step = 0,
+                name = residue.Normal ? "PLC任务残留检测" : "PLC任务残留检测失败",
+                detail = residue.Detail,
+                raw = residue.Raw
+            });
+            if (!residue.Normal)
+                return Ok(new { success = false, error = residue.Error, steps, logs = logEntries });
+
             // 步骤1：查询PLC状态
             ushort status = await _device.ReadHoldingRegisterAsync(4009);
             var statusText = status switch { 1 => "空闲中", 2 => "运行中", 3 => "故障中", 4 => "暂停中", _ => $"未知({status})" };
@@ -569,6 +602,57 @@ public class DeviceController : ControllerBase
         _logger.Info($"===== 出库任务结束 ({(success ? "成功" : "失败")}) =====");
         logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ===== 出库任务 {(success ? "成功" : "失败")} =====");
         return Ok(new { success, steps, logs = logEntries });
+    }
+
+    // ===== 任务残留检测 =====
+
+    /// <summary>
+    /// 出入库任务下发前检测PLC是否存在任务残留
+    /// 发送 00 05 00 00 00 06 01 03 07 DC 00 01，正常应答为 ... 01 03 02 00 00（D2012=0）
+    /// 其它应答视为残留，提示重启PLC，且不再下发任务
+    /// </summary>
+    private async Task<(bool Normal, string Detail, string Raw, string? Error)> CheckTaskResidueAsync(List<string> logEntries)
+    {
+        var sendHex = BitConverter.ToString(TaskResidueFrame);
+        _logger.Info($"PLC任务残留检测 发送: {sendHex}");
+        logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 🔍 PLC任务残留检测 发送: {sendHex}");
+
+        byte[] response;
+        try
+        {
+            response = await _device.SendRawFrameAsync(TaskResidueFrame);
+        }
+        catch (Exception ex)
+        {
+            var commErr = $"PLC通信异常，无法检测任务残留: {ex.Message}";
+            _logger.Error(commErr);
+            logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ❌ {commErr}");
+            return (false, commErr, $"发送: {sendHex}", commErr);
+        }
+
+        var respHex = response.Length > 0 ? BitConverter.ToString(response) : "(无应答)";
+        _logger.Info($"PLC任务残留检测 应答: {respHex}");
+        logEntries.Add($"[{DateTime.Now:HH:mm:ss}] PLC任务残留检测 应答: {respHex}");
+        var raw = $"发送: {sendHex} / 应答: {respHex}";
+
+        // 解析应答：功能码03 + 字节数02 + 2字节寄存器值
+        ushort? residueValue = null;
+        if (response.Length >= 11 && response[7] == 0x03 && response[8] == 0x02)
+            residueValue = (ushort)((response[9] << 8) | response[10]);
+
+        if (residueValue == 0)
+        {
+            _logger.Info($"D{TaskResidueAddress} = 0，PLC无任务残留，继续执行任务");
+            logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ✅ PLC无任务残留");
+            return (true, $"D{TaskResidueAddress} = 0，PLC无任务残留", raw, null);
+        }
+
+        var detail = residueValue.HasValue
+            ? $"{TaskResidueError} (D{TaskResidueAddress} = {residueValue})"
+            : $"{TaskResidueError} (应答异常: {respHex})";
+        _logger.Error($"任务残留检测未通过: {detail}");
+        logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ❌ {detail}");
+        return (false, detail, raw, TaskResidueError);
     }
 
     // ===== 故障记录辅助方法 =====

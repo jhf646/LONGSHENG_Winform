@@ -941,6 +941,7 @@ body {
 <h3 id="4.4-plc%E5%85%A5%E5%BA%93%E4%BB%BB%E5%8A%A1" tabindex="-1">4.4 PLC入库任务</h3>
 <p>点击 <strong>入库确认</strong> 后，系统自动执行以下步骤并在弹窗中显示进度：</p>
 <ol>
+<li><strong>PLC任务残留检测</strong> — 下发任务前发送帧 <code>00 05 00 00 00 06 01 03 07 DC 00 01</code> 读取D2012；应答为 <code>00 05 00 00 00 05 01 03 02 00 00</code>（值=0）说明PLC正常，可继续后续检测；应答为其它值（如 <code>... 01 03 02 00 03</code>）则提示 <strong>“检测到PLC中存在任务残留请重启PLC！”</strong> 并终止任务</li>
 <li><strong>查询PLC状态</strong> — 检测立库是否空闲（D4009=1）</li>
 <li><strong>查询推荐货位</strong> — 根据托盘号匹配内部编号，自动推荐空闲货位</li>
 <li><strong>发送PLC指令</strong> — 写入D2022~D2026寄存器（动作码=3），逐条显示写入日志</li>
@@ -970,6 +971,7 @@ body {
 <h3 id="5.3-plc%E5%87%BA%E5%BA%93%E4%BB%BB%E5%8A%A1" tabindex="-1">5.3 PLC出库任务</h3>
 <p>点击 <strong>执行出库</strong> 后：</p>
 <ol>
+<li><strong>PLC任务残留检测</strong> — 下发任务前发送帧 <code>00 05 00 00 00 06 01 03 07 DC 00 01</code> 读取D2012，应答值必须为0，否则提示 <strong>“检测到PLC中存在任务残留请重启PLC！”</strong> 并终止任务</li>
 <li><strong>查询PLC状态</strong> — 检测立库是否空闲</li>
 <li><strong>发送出库指令</strong> — 从工件记录解析货位排/列/层，写入PLC（动作码=2）</li>
 <li><strong>等待任务完成</strong> — 监测D4009状态和D4014任务完成标志</li>

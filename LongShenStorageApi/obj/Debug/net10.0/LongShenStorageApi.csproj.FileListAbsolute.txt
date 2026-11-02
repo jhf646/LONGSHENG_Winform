@@ -144,3 +144,13 @@ D:\工作\上海longshen\LONGSHENG_Winform\LongShenStorageApi\obj\Debug\net10.0\
 D:\工作\上海longshen\LONGSHENG_Winform\LongShenStorageApi\obj\Debug\net10.0\ref\LongShenStorageApi.dll
 D:\工作\上海longshen\LONGSHENG_Winform\LongShenStorageApi\bin\Debug\net10.0\faultcodes.json
 C:\Users\jiaohengfei\Desktop\上海隆深\上海隆深软件\隆深软件程序\LongShenStorageApi\bin\Debug\net10.0\faultcodes.json
+C:\Users\jiaohengfei\AppData\Local\Temp\ls_build_check\appsettings.Development.json
+C:\Users\jiaohengfei\AppData\Local\Temp\ls_build_check\appsettings.json
+C:\Users\jiaohengfei\AppData\Local\Temp\ls_build_check\faultcodes.json
+C:\Users\jiaohengfei\AppData\Local\Temp\ls_build_check\registers.json
+C:\Users\jiaohengfei\AppData\Local\Temp\ls_build_check\LongShenStorageApi.staticwebassets.endpoints.json
+C:\Users\jiaohengfei\AppData\Local\Temp\ls_build_check\LongShenStorageApi.exe
+C:\Users\jiaohengfei\AppData\Local\Temp\ls_build_check\LongShenStorageApi.deps.json
+C:\Users\jiaohengfei\AppData\Local\Temp\ls_build_check\LongShenStorageApi.runtimeconfig.json
+C:\Users\jiaohengfei\AppData\Local\Temp\ls_build_check\LongShenStorageApi.dll
+C:\Users\jiaohengfei\AppData\Local\Temp\ls_build_check\LongShenStorageApi.pdb

@@ -89,7 +89,14 @@ if (webRoot is not null)
     app.UseStaticFiles(new StaticFileOptions
     {
         FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(webRoot),
-        ServeUnknownFileTypes = true
+        ServeUnknownFileTypes = true,
+        // 前端页面/脚本不允许浏览器沿用旧缓存，避免更新后仍加载旧版本
+        OnPrepareResponse = ctx =>
+        {
+            ctx.Context.Response.Headers.CacheControl = "no-cache, must-revalidate";
+            ctx.Context.Response.Headers.Pragma = "no-cache";
+            ctx.Context.Response.Headers.Expires = "0";
+        }
     });
     app.MapGet("/", () => Results.Redirect("/index.html"));
 }

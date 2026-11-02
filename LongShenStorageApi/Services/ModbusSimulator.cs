@@ -38,10 +38,40 @@ public sealed class ModbusSimulator : IModbusDevice
     }
 
     /// <summary>模拟运行一个周期 - 响应写入指令，模拟设备运行</summary>
-    public Task SendRawFrameAsync(byte[] frame)
+    /// <remarks>仅支持功能码03(读保持寄存器)，按Modbus TCP标准组包应答，供任务残留检测使用</remarks>
+    public Task<byte[]> SendRawFrameAsync(byte[] frame)
     {
         System.Console.WriteLine($"[Simulator] 收到原始帧: {BitConverter.ToString(frame)}");
-        return Task.CompletedTask;
+
+        if (frame.Length < 12 || frame[7] != 0x03)
+            return Task.FromResult(Array.Empty<byte>());
+
+        var transactionId = (ushort)((frame[0] << 8) | frame[1]);
+        var protocolId = (ushort)((frame[2] << 8) | frame[3]);
+        var unitId = frame[6];
+        var startAddress = (ushort)((frame[8] << 8) | frame[9]);
+        var count = (ushort)((frame[10] << 8) | frame[11]);
+        var values = ReadRegisters(startAddress, count);
+
+        var response = new byte[9 + count * 2];
+        response[0] = (byte)(transactionId >> 8);
+        response[1] = (byte)transactionId;
+        response[2] = (byte)(protocolId >> 8);
+        response[3] = (byte)protocolId;
+        var length = (ushort)(3 + count * 2);
+        response[4] = (byte)(length >> 8);
+        response[5] = (byte)length;
+        response[6] = unitId;
+        response[7] = 0x03;
+        response[8] = (byte)(count * 2);
+        for (var i = 0; i < count; i++)
+        {
+            response[9 + i * 2] = (byte)(values[i] >> 8);
+            response[10 + i * 2] = (byte)values[i];
+        }
+
+        System.Console.WriteLine($"[Simulator] 应答原始帧: {BitConverter.ToString(response)}");
+        return Task.FromResult(response);
     }
 
     public void Tick()
