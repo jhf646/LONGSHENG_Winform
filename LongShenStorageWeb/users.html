@@ -9,17 +9,17 @@
 <div class="sidebar">
   <div class="sidebar-logo"><div class="logo-icon" style="background:transparent;width:auto;height:auto;font-size:22px">🏭</div><div class="logo-text">氢晨科技<small>库存管理系统</small></div></div>
   <nav class="sidebar-nav">
-    <a class="nav-item" href="index.html"><span class="nav-icon">📊</span>仪表盘</a>
-    <a class="nav-item perm-write" href="inbound.html"><span class="nav-icon">📥</span>入库管理</a>
-    <a class="nav-item perm-write" href="outbound.html"><span class="nav-icon">📤</span>出库管理</a>
-    <a class="nav-item" href="slots.html"><span class="nav-icon">🗄️</span>货位管理</a>
-    <a class="nav-item" href="ledger.html"><span class="nav-icon">📋</span>台账查询</a>
-    <a class="nav-item" href="report.html"><span class="nav-icon">📈</span>报表统计</a>
-    <a class="nav-item perm-write" href="alert.html"><span class="nav-icon">⚠️</span>库存预警</a>
-    <a class="nav-item" href="devmonitor.html"><span class="nav-icon">📡</span>设备监控</a>
-    <a class="nav-item perm-write" href="devcontrol.html"><span class="nav-icon">🎮</span>设备调用</a>
-    <a class="nav-item perm-admin active" href="users.html"><span class="nav-icon">👥</span>用户管理</a>
-    <a class="nav-item perm-admin" href="roles.html"><span class="nav-icon">🔐</span>角色权限</a>
+    <a class="nav-item" data-page="dashboard" href="index.html"><span class="nav-icon">📊</span>仪表盘</a>
+    <a class="nav-item perm-write" data-page="inbound" href="inbound.html"><span class="nav-icon">📥</span>入库管理</a>
+    <a class="nav-item perm-write" data-page="outbound" href="outbound.html"><span class="nav-icon">📤</span>出库管理</a>
+    <a class="nav-item" data-page="slots" href="slots.html"><span class="nav-icon">🗄️</span>货位管理</a>
+    <a class="nav-item" data-page="ledger" href="ledger.html"><span class="nav-icon">📋</span>台账查询</a>
+    <a class="nav-item" data-page="report" href="report.html"><span class="nav-icon">📈</span>报表统计</a>
+    <a class="nav-item perm-write" data-page="alert" href="alert.html"><span class="nav-icon">⚠️</span>库存预警</a>
+    <a class="nav-item" data-page="devmonitor" href="devmonitor.html"><span class="nav-icon">📡</span>设备监控</a>
+    <a class="nav-item perm-write" data-page="devcontrol" href="devcontrol.html"><span class="nav-icon">🎮</span>设备调用</a>
+    <a class="nav-item perm-admin active" data-page="users" href="users.html"><span class="nav-icon">👥</span>用户管理</a>
+    <a class="nav-item perm-admin" data-page="roles" href="roles.html"><span class="nav-icon">🔐</span>角色权限</a>
   </nav>
   <div class="sidebar-footer"><div class="user-info"><div class="user-avatar" id="sidebarAvatar">U</div><div><div class="user-name" id="sidebarUserName">-</div><div class="user-role" id="sidebarUserRole">-</div></div></div><button class="logout-btn" onclick="logout()">退出登录</button></div>
 </div>
@@ -52,6 +52,7 @@
 initPage('users', '用户管理');
 let editingUserId = null;
 loadUserList();
+onPageActivate(loadUserList);
 
 async function loadUserList() {
     try {

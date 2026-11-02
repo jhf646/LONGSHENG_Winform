@@ -1,14 +1,28 @@
 // ===== 氢晨库存管理系统 - 公共模块 =====
 const API_BASE = 'http://localhost:5000/api';
 
+// 是否内嵌在应用外壳（index.html）的 iframe 中
+const IN_EMBEDDED_FRAME = (function () {
+  try { return window.self !== window.top; } catch (e) { return true; }
+})();
+if (IN_EMBEDDED_FRAME) document.documentElement.classList.add('embedded');
+
 // 认证信息
 let authToken = localStorage.getItem('ls_token') || '';
 let currentUser = null;
 try { currentUser = JSON.parse(localStorage.getItem('ls_user') || 'null'); } catch(e) { localStorage.removeItem('ls_user'); }
 
+// 跳转登录页（内嵌时跳转最外层窗口，避免登录页出现在子框架里）
+function gotoLogin() {
+  if (IN_EMBEDDED_FRAME) {
+    try { window.top.location.href = 'login.html'; return; } catch (e) { /* 跨域时退回当前窗口 */ }
+  }
+  window.location.href = 'login.html';
+}
+
 // 未登录跳转
 if (!authToken || !currentUser) {
-  window.location.href = 'login.html';
+  gotoLogin();
 }
 
 // 内置超级管理员ID
@@ -36,7 +50,7 @@ function hasRole(...roles) { return currentUser && roles.includes(currentUser.ro
 function logout() {
     authToken = ''; currentUser = null;
     localStorage.removeItem('ls_token'); localStorage.removeItem('ls_user');
-    window.location.href = 'login.html';
+    gotoLogin();
 }
 
 // ===== 页面初始化 =====
@@ -61,10 +75,22 @@ function initPage(pageId, pageTitle) {
 
     // 启动时钟
     updateClock();
-    setInterval(updateClock, 1000);
-    
-    // 更新顶部状态
-    updateHeaderStatus();
+    // 内嵌在应用外壳时，时钟与顶部状态由外壳统一维护
+    if (!IN_EMBEDDED_FRAME) {
+        setInterval(updateClock, 1000);
+
+        // 更新顶部状态
+        updateHeaderStatus();
+    }
+}
+
+// ===== 页面数据刷新回调（应用外壳切换到本页签时触发） =====
+const pageActivateHandlers = [];
+function onPageActivate(fn) {
+    if (typeof fn === 'function') pageActivateHandlers.push(fn);
+}
+function runPageActivate() {
+    pageActivateHandlers.forEach(fn => { try { fn(); } catch (e) { /* 忽略单个回调异常 */ } });
 }
 
 function updateClock() {

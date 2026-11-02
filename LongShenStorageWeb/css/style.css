@@ -257,3 +257,10 @@ body {
 .flex { display: flex; } .gap-8 { gap: 8px; } .gap-16 { gap: 16px; }
 .items-center { align-items: center; } .text-center { text-align: center; }
 .text-right { text-align: right; }
+
+/* ===== 内嵌模式：被应用外壳（index.html）以 iframe 载入时隐藏页面自带的侧边栏与顶栏 ===== */
+html.embedded .sidebar,
+html.embedded .topbar { display: none !important; }
+html.embedded body { display: block; background: transparent; }
+html.embedded .main { display: block !important; margin-left: 0; min-height: 0; }
+html.embedded .content { padding: 16px 18px 24px; }

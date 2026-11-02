@@ -1,0 +1,55 @@
+/* ===== 应用外壳：单页多标签布局（index.html） ===== */
+
+/* style.css 中侧边栏/主区域默认为隐藏，外壳里始终显示 */
+.sidebar { display: flex; }
+.main {
+    display: flex; flex-direction: column;
+    height: 100vh; min-height: 0; overflow: hidden;
+}
+.main .topbar { flex-shrink: 0; }
+
+/* ===== 页签栏 ===== */
+.tabbar {
+    display: flex; align-items: flex-end; gap: 8px;
+    padding: 6px 10px 0 12px; height: 40px; flex-shrink: 0;
+    background: #e4e8ee; border-bottom: 1px solid var(--border);
+}
+.tabbar-tabs {
+    display: flex; align-items: flex-end; gap: 4px;
+    flex: 1; min-width: 0; overflow-x: auto; overflow-y: hidden;
+}
+.tabbar-refresh {
+    flex-shrink: 0; margin-bottom: 6px; padding: 4px 8px;
+    font-size: 12px; line-height: 1; font-family: inherit;
+    background: #fff; border: 1px solid var(--border); border-radius: 4px;
+    color: var(--text-secondary); cursor: pointer;
+}
+.tabbar-refresh:hover { color: var(--primary); border-color: var(--primary); }
+.app-tab {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 10px 7px 12px; max-width: 200px;
+    background: #f5f6f8; border: 1px solid var(--border); border-bottom: none;
+    border-radius: 6px 6px 0 0; color: var(--text-secondary);
+    font-size: 13px; white-space: nowrap; cursor: pointer; user-select: none;
+    position: relative; top: 1px; flex-shrink: 0;
+}
+.app-tab:hover { background: #fff; color: var(--text); }
+.app-tab.active {
+    background: #fff; color: var(--primary); font-weight: bold;
+    box-shadow: inset 0 2px 0 var(--accent);
+}
+.app-tab .app-tab-icon { font-size: 14px; }
+.app-tab .app-tab-label { overflow: hidden; text-overflow: ellipsis; }
+.app-tab .app-tab-close {
+    font-size: 11px; line-height: 1; padding: 2px 4px;
+    border-radius: 3px; color: #98a2b3;
+}
+.app-tab .app-tab-close:hover { background: #fee8e8; color: var(--danger); }
+
+/* ===== 页面容器（iframe 保活，切换不重新加载） ===== */
+.frame-wrap { position: relative; flex: 1; min-height: 0; background: var(--bg); }
+.page-frame {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    border: 0; display: none; background: var(--bg);
+}
+.page-frame.active { display: block; }

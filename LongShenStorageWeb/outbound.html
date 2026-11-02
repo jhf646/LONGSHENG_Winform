@@ -15,17 +15,17 @@
     <div class="logo-text">氢晨科技<small>库存管理系统</small></div>
   </div>
   <nav class="sidebar-nav">
-    <a class="nav-item" href="index.html"><span class="nav-icon">📊</span>仪表盘</a>
-    <a class="nav-item perm-write" href="inbound.html"><span class="nav-icon">📥</span>入库管理</a>
-    <a class="nav-item perm-write active" href="outbound.html"><span class="nav-icon">📤</span>出库管理</a>
-    <a class="nav-item" href="slots.html"><span class="nav-icon">🗄️</span>货位管理</a>
-    <a class="nav-item" href="ledger.html"><span class="nav-icon">📋</span>台账查询</a>
-    <a class="nav-item" href="report.html"><span class="nav-icon">📈</span>报表统计</a>
-    <a class="nav-item perm-write" href="alert.html"><span class="nav-icon">⚠️</span>库存预警</a>
-    <a class="nav-item" href="devmonitor.html"><span class="nav-icon">📡</span>设备监控</a>
-    <a class="nav-item perm-write" href="devcontrol.html"><span class="nav-icon">🎮</span>设备调用</a>
-    <a class="nav-item perm-admin" href="users.html"><span class="nav-icon">👥</span>用户管理</a>
-    <a class="nav-item perm-admin" href="roles.html"><span class="nav-icon">🔐</span>角色权限</a>
+    <a class="nav-item" data-page="dashboard" href="index.html"><span class="nav-icon">📊</span>仪表盘</a>
+    <a class="nav-item perm-write" data-page="inbound" href="inbound.html"><span class="nav-icon">📥</span>入库管理</a>
+    <a class="nav-item perm-write active" data-page="outbound" href="outbound.html"><span class="nav-icon">📤</span>出库管理</a>
+    <a class="nav-item" data-page="slots" href="slots.html"><span class="nav-icon">🗄️</span>货位管理</a>
+    <a class="nav-item" data-page="ledger" href="ledger.html"><span class="nav-icon">📋</span>台账查询</a>
+    <a class="nav-item" data-page="report" href="report.html"><span class="nav-icon">📈</span>报表统计</a>
+    <a class="nav-item perm-write" data-page="alert" href="alert.html"><span class="nav-icon">⚠️</span>库存预警</a>
+    <a class="nav-item" data-page="devmonitor" href="devmonitor.html"><span class="nav-icon">📡</span>设备监控</a>
+    <a class="nav-item perm-write" data-page="devcontrol" href="devcontrol.html"><span class="nav-icon">🎮</span>设备调用</a>
+    <a class="nav-item perm-admin" data-page="users" href="users.html"><span class="nav-icon">👥</span>用户管理</a>
+    <a class="nav-item perm-admin" data-page="roles" href="roles.html"><span class="nav-icon">🔐</span>角色权限</a>
   </nav>
   <div class="sidebar-footer">
     <div class="user-info">
@@ -102,6 +102,7 @@ let selectedOutboundId = null;
 loadOutboundInventory();
 loadOutboundRecent();
 loadFaultTasks();
+onPageActivate(function () { loadOutboundRecent(); loadFaultTasks(); });
 
 async function loadOutboundInventory() {
     try {
