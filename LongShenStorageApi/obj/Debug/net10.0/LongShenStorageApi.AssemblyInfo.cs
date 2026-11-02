@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LongShenStorageApi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+01207d457a84a38593b8bc913392478d724f2b37")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+aa4ec3b26dd35d747ca15950f77309be77a7b70b")]
 [assembly: System.Reflection.AssemblyProductAttribute("LongShenStorageApi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LongShenStorageApi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

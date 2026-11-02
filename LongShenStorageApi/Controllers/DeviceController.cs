@@ -207,6 +207,16 @@ public class DeviceController : ControllerBase
 
         try
         {
+            // 托盘查重：必须在下发任何PLC动作之前拦截，避免无谓的堆垛机搬运
+            if (_repo.IsPalletInStock(request.PalletNumber))
+            {
+                var dupMsg = $"托盘{request.PalletNumber}已在库中，无法重复入库";
+                _logger.Error($"入库失败: {dupMsg}");
+                logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ❌ {dupMsg}");
+                steps.Add(new { step = 0, name = "托盘查重", detail = dupMsg, raw = "" });
+                return Ok(new { success = false, error = dupMsg, steps, logs = logEntries });
+            }
+
             // 步骤1：查询PLC状态
             _logger.Info($"===== 入库任务开始 托盘:{request.PalletNumber} 位置:{request.Row}排/{request.Col}列/{request.Level}层 =====");
             logEntries.Add($"[{DateTime.Now:HH:mm:ss}] 入库任务开始 - 托盘:{request.PalletNumber}");
@@ -334,8 +344,8 @@ public class DeviceController : ControllerBase
                     var dupMsg = $"托盘{request.PalletNumber}已在库中，无法重复入库";
                     _logger.Error(dupMsg);
                     logEntries.Add($"[{DateTime.Now:HH:mm:ss}] ❌ {dupMsg}");
-                    steps.Add(new { step = 5, name = "数据库写入", detail = "失败：该托盘已在库中", raw = "" });
-                    return Ok(new { success = false, error = "该库位已占用，无法入库", steps, logs = logEntries });
+                    steps.Add(new { step = 5, name = "数据库写入", detail = $"失败：{dupMsg}", raw = "" });
+                    return Ok(new { success = false, error = dupMsg, steps, logs = logEntries });
                 }
                 var record = _repo.Inbound(new InboundRequest
                 {

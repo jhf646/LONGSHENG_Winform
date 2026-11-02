@@ -296,11 +296,32 @@ function clearInbound() {
     if (currentUser) document.getElementById('inOperator').value = currentUser.displayName || '';
 }
 
+// 托盘号归一化：与后端 NormalizePallet 保持一致（取数字后三位补零，"15"/"T015"/"001-063" 均可比较）
+function normalizePalletNumber(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    return (digits.length > 3 ? digits.slice(-3) : digits).padStart(3, '0');
+}
+
 async function handleInbound() {
     const operator = document.getElementById('inOperator').value.trim();
     if (!operator) { toast('请先登录', 'error'); return; }
     const palletNumber = document.getElementById('inPallet').value.trim();
     if (!palletNumber) { toast('请输入托盘号', 'error'); return; }
+
+    // 托盘号查重：必须在发起任何PLC动作前拦截，重复托盘直接拒绝
+    let state;
+    try {
+        state = await api('/appstate');
+    } catch (e) {
+        toast(`❌ 读取库存失败: ${e.message}`, 'error');
+        return;
+    }
+    const palletKey = normalizePalletNumber(palletNumber);
+    const dupPallet = (state.inventory || []).find(i => normalizePalletNumber(i.palletNumber) === palletKey);
+    if (dupPallet) {
+        toast(`❌ 托盘 ${palletNumber} 已在库中（货位 ${dupPallet.slotCode || '-'}），无法重复入库`, 'error');
+        return;
+    }
 
     // 先查询推荐空闲货位
     showPlcTaskModal('📥 入库任务执行中');
@@ -320,19 +341,6 @@ async function handleInbound() {
 
         // 步骤2: 查询推荐货位（根据托盘号匹配内部编号）
         addPlcStep(2, '查询推荐货位', '', 'active');
-        const state = await api('/appstate');
-        // 托盘号查重：已在库中则直接提示，禁止重复入库
-        const palletKey = (palletNumber.match(/\d+/) || [''])[0].padStart(3, '0');
-        const alreadyInStock = (state.inventory || []).some(i => {
-            const d = (i.palletNumber || '').match(/\d+/);
-            return (d ? d[0].padStart(3, '0') : '') === palletKey;
-        });
-        if (alreadyInStock) {
-            updatePlcStep(2, '该库位已占用，无法入库', 'error');
-            toast('❌ 该库位已占用，无法入库', 'error');
-            document.getElementById('plcTaskCloseBtn').classList.remove('hidden');
-            return;
-        }
         // 从托盘号提取数字匹配内部编号
         const numMatch = palletNumber.match(/\d+/);
         let targetSlot = null;

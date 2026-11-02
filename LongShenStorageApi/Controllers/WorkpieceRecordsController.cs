@@ -40,7 +40,7 @@ public class WorkpieceRecordsController : ControllerBase
 
         // 托盘号已在库中则禁止重复入库
         if (_repo.IsPalletInStock(request.PalletNumber))
-            return BadRequest(new { error = "该库位已占用，无法入库" });
+            return BadRequest(new { error = $"托盘{request.PalletNumber}已在库中，无法重复入库" });
 
         var result = _repo.Inbound(request);
         if (result is null)
