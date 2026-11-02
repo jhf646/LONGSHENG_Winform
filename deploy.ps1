@@ -242,6 +242,13 @@ if (-not $SkipApi) {
             $dotnetPath = (Get-Command dotnet).Source
             $taskCmd = "dotnet `"$exePath`" --urls http://0.0.0.0:$ApiPort"
             schtasks /create /tn "LongShenStorageApi" /tr "$taskCmd" /sc onstart /ru SYSTEM /f
+
+            # API进程异常退出时自动重启，避免计划任务只启动一次后失效
+            $task = Get-ScheduledTask -TaskName "LongShenStorageApi" -ErrorAction Stop
+            $task.Settings.RestartCount = 999
+            $task.Settings.RestartInterval = "PT1M"
+            $task.Settings.ExecutionTimeLimit = "PT0S"
+            Set-ScheduledTask -InputObject $task | Out-Null
             Write-Success "Auto-start task [LongShenStorageApi] created"
 
             # 立即启动

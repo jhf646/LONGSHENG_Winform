@@ -213,7 +213,17 @@ public sealed class ModbusSimulatorHostedService : IHostedService, IDisposable
     public Task StartAsync(CancellationToken cancellationToken)
     {
         // 每500ms模拟一个周期
-        _timer = new Timer(_ => _device.Tick(), null, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(500));
+        _timer = new Timer(_ =>
+        {
+            try
+            {
+                _device.Tick();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[HostedService] 设备心跳异常，继续运行: {ex.Message}");
+            }
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromMilliseconds(500));
         return Task.CompletedTask;
     }
 
